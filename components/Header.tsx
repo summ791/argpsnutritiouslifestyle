@@ -29,7 +29,7 @@ export const Header: React.FC = () => {
           {/* Logo & Brand Name */}
           <div className="flex-shrink-0 flex items-center gap-4 cursor-pointer" onClick={() => navigate('/')}>
              <img 
-               src="/logo.jpg" 
+               src="https://raw.githubusercontent.com/summ791/argpsapp2/main/logo.jpg" 
                alt="ARGPS Logo" 
                className="h-16 w-auto object-contain"
              />
