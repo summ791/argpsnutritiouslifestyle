@@ -40,9 +40,6 @@ export const Home: React.FC = () => {
                     src="/rithanya-profile.jpg" 
                     alt="Rithanya Gopinathan" 
                     className="w-full h-full object-cover object-top transform hover:scale-110 transition-transform duration-700"
-                    onError={(e) => {
-                      e.currentTarget.src = "https://images.unsplash.com/photo-1544367563-12123d8965cd?q=80&w=2070&auto=format&fit=crop";
-                    }}
                   />
                 </div>
                 
