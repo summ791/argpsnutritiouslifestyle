@@ -43,9 +43,9 @@ export const About: React.FC = () => {
                <div className="flex items-center gap-5 pt-4 border-t border-gray-50">
                   <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-primary-100 flex-shrink-0">
                      <img 
-                        src="/rithanya-profile.jpg" 
+                        src="https://raw.githubusercontent.com/summ791/argpsapp2/main/rithanya-profile.jpg" 
                         alt="Rithanya Gopinathan" 
-                        className="w-full h-full object-cover object-top"
+                        className="w-full h-full object-cover object-center"
                      />
                   </div>
                   <div>
