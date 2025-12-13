@@ -141,6 +141,18 @@ export const Services: React.FC = () => {
           </div>
         </div>
       </section>
+
+      {/* Important Note Card */}
+      <section className="py-12 bg-white">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+           <div className="bg-primary-50 border border-primary-100 rounded-xl p-8 text-center shadow-sm">
+              <h3 className="font-serif text-xl font-bold text-primary-900 mb-2">Important Note</h3>
+              <p className="text-gray-700">
+                These outcomes are not typical; individual outcomes may vary from person to person
+              </p>
+           </div>
+        </div>
+      </section>
     </div>
   );
 };
