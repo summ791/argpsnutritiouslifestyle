@@ -57,22 +57,24 @@ export const Footer: React.FC = () => {
         <div className="border-t border-primary-800 pt-8 flex flex-col md:flex-row justify-between items-center text-sm text-primary-300">
           <p>© 2025 ARGPS Nutritious Lifestyle. All rights reserved.</p>
           <div className="flex space-x-6 mt-4 md:mt-0">
-            <a 
-              href="https://www.instagram.com/argps_nutritious_lifestyle?igsh=MWN6bzM1aXppNTFuNw==" 
-              target="_blank" 
-              rel="noopener noreferrer" 
-              className="hover:text-white hover:scale-110 transition-all duration-200"
-            >
-              <Instagram size={24} />
-            </a>
-            <a 
-              href="https://www.facebook.com/share/17jSixwQ2w/" 
-              target="_blank" 
-              rel="noopener noreferrer" 
-              className="hover:text-white hover:scale-110 transition-all duration-200"
-            >
-              <Facebook size={24} />
-            </a>
+              <a 
+                href="https://www.instagram.com/argps_nutritious_lifestyle?igsh=MWN6bzM1aXppNTFuNw==" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="hover:text-white hover:scale-110 transition-all duration-200"
+                aria-label="Instagram"
+              >
+                <Instagram size={24} />
+              </a>
+              <a 
+                href="https://www.facebook.com/share/17jSixwQ2w/" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="hover:text-white hover:scale-110 transition-all duration-200"
+                aria-label="Facebook"
+              >
+                <Facebook size={24} />
+              </a>
           </div>
         </div>
       </div>
