@@ -64,17 +64,17 @@ export const ContactForm: React.FC = () => {
 
   return (
     <>
-      <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden flex flex-col md:flex-row">
+      <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden flex flex-col lg:flex-row">
         {/* Left Info Panel - Green */}
-        <div className="bg-[#0d9488] p-8 md:p-12 md:w-5/12 text-white flex flex-col justify-between">
+        <div className="bg-[#0d9488] p-6 md:p-8 lg:p-12 lg:w-5/12 text-white flex flex-col justify-between h-auto lg:min-h-[600px]">
           
           <div>
-            <h3 className="font-serif text-2xl font-bold mb-8 md:mb-10">Contact Information</h3>
+            <h3 className="font-serif text-2xl font-bold mb-6 md:mb-10">Contact Information</h3>
             
             <div className="space-y-6 md:space-y-8">
               <div className="flex items-start gap-4">
                  <Mail className="text-white opacity-80 mt-1 flex-shrink-0" size={20} />
-                 <div className="overflow-hidden">
+                 <div className="overflow-hidden w-full">
                    <p className="font-bold text-white text-sm mb-1">Email</p>
                    <p className="text-sm text-white/90 break-all">argpsnutritiouslifestyle25@gmail.com</p>
                  </div>
@@ -98,7 +98,7 @@ export const ContactForm: React.FC = () => {
             </div>
           </div>
 
-          <div className="mt-12">
+          <div className="mt-12 lg:mt-0">
             <h4 className="font-bold text-white mb-4 text-sm">Follow Me on</h4>
             <div className="flex gap-4">
               <a 
@@ -124,7 +124,7 @@ export const ContactForm: React.FC = () => {
         </div>
 
         {/* Right Form Panel - White */}
-        <div className="p-8 md:p-12 md:w-7/12 bg-white">
+        <div className="p-6 md:p-8 lg:p-12 lg:w-7/12 bg-white">
           <form ref={form} onSubmit={sendEmail} className="space-y-6">
             <div>
                 <label htmlFor="name" className="block text-sm font-bold text-gray-700 mb-2">Name</label>
