@@ -87,7 +87,7 @@ export const Services: React.FC = () => {
             <span className="text-primary-600 font-bold tracking-wider uppercase text-xs md:text-sm block mb-2">How It Works</span>
             <h2 className="font-serif text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-4">Your Journey to Better Health</h2>
             <p className="text-gray-600 max-w-2xl mx-auto text-base md:text-lg">
-              A simple, structured approach to achieving your nutrition goals.
+              A simple, structured approach to achieve your nutrition goals.
             </p>
           </div>
 
