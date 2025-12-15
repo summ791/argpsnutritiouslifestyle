@@ -21,12 +21,18 @@ export const Home: React.FC = () => {
                 Achieve your health goals with personalized nutrition guidance and practical tips for a balanced lifestyle.
               </p>
               
-              <div className="flex justify-center lg:justify-start">
+              <div className="flex flex-col sm:flex-row justify-center lg:justify-start gap-4">
                 <Link 
                   to="/contact" 
-                  className="px-6 md:px-8 py-3 md:py-3.5 bg-primary-600 text-white rounded-full font-semibold hover:bg-primary-700 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 duration-200 tracking-wide text-sm md:text-base"
+                  className="px-6 md:px-8 py-3 md:py-3.5 bg-primary-600 text-white rounded-full font-semibold hover:bg-primary-700 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 duration-200 tracking-wide text-sm md:text-base text-center"
                 >
                   Start Your Journey
+                </Link>
+                <Link 
+                  to="/services" 
+                  className="px-6 md:px-8 py-3 md:py-3.5 bg-primary-100 text-primary-800 border border-primary-200 rounded-full font-semibold hover:bg-primary-200 transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5 duration-200 tracking-wide text-sm md:text-base text-center"
+                >
+                  View Services
                 </Link>
               </div>
             </div>
