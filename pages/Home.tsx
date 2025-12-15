@@ -1,7 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { BookOpen, Activity, Heart, ArrowRight, Star, Globe, CheckCircle2 } from 'lucide-react';
-import { ContactForm } from '../components/ContactForm';
 
 export const Home: React.FC = () => {
   return (
@@ -113,7 +112,7 @@ export const Home: React.FC = () => {
       </section>
 
       {/* About Me & Philosophy Section */}
-      <section className="py-16 md:py-20 bg-[#F8FAFC]">
+      <section className="pt-16 md:pt-20 pb-8 md:pb-12 bg-[#F8FAFC]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
            <div className="flex flex-col lg:flex-row gap-10 md:gap-12 lg:gap-16 items-start mb-12 md:mb-16">
              
@@ -183,20 +182,33 @@ export const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* Contact Section */}
-      <section className="py-16 md:py-24 bg-white">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-           <div className="text-center mb-10 md:mb-12">
-             <span className="bg-primary-50 text-primary-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest mb-3 md:mb-4 inline-block">Get In Touch</span>
-             <h2 className="font-serif text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-4 md:mb-6">Contact Us</h2>
-             <p className="text-gray-600 text-base md:text-lg max-w-2xl mx-auto">
-               Have questions or ready to start your wellness journey? Reach out and we'll get back to you as soon as possible
-             </p>
+      {/* CTA / Contact Section - Replaced as requested */}
+      <section className="pt-6 md:pt-10 pb-20 md:pb-32 bg-white">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+           
+           {/* Heart Icon */}
+           <div className="w-16 h-16 md:w-20 md:h-20 bg-orange-50 rounded-full flex items-center justify-center mx-auto mb-8 md:mb-10">
+              <Heart className="w-8 h-8 md:w-10 md:h-10 text-orange-500" fill="currentColor" />
            </div>
-           <ContactForm />
-           <p className="text-center text-gray-500 text-xs md:text-sm mt-8 italic">
-              Note: Consultations are by appointment only. Please contact us by filling the contact form to schedule.
+
+           {/* Heading */}
+           <h2 className="font-serif text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-6 md:mb-8 leading-[1.15]">
+             Get a healthier version of yourself you always wished for
+           </h2>
+
+           {/* Subtext */}
+           <p className="text-gray-600 text-base md:text-lg max-w-2xl mx-auto mb-10 md:mb-12 leading-relaxed">
+             Have questions or ready to book a consultation? Reach out and we'll get back to you as soon as possible.
            </p>
+
+           {/* Button */}
+           <Link 
+             to="/contact" 
+             className="inline-flex items-center justify-center px-8 md:px-10 py-3.5 md:py-4 bg-primary-600 text-white rounded-full font-semibold hover:bg-primary-700 transition-all shadow-lg hover:shadow-xl hover:-translate-y-1 duration-200 text-base md:text-lg"
+           >
+             Contact Us
+           </Link>
+           
         </div>
       </section>
     </div>
