@@ -125,7 +125,7 @@ export const ContactForm: React.FC = () => {
                   <Instagram size={20} />
               </a>
               <a 
-                href="https://www.facebook.com/share/17jSixwQ2w/" 
+                href="https://www.facebook.com/share/1NwZcFCtLQ/" 
                 target="_blank" 
                 rel="noopener noreferrer" 
                 className="w-10 h-10 border border-white/30 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors"
