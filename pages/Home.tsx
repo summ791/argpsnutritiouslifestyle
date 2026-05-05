@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { BookOpen, Activity, Heart, ArrowRight, Star, Globe, CheckCircle2 } from 'lucide-react';
+import { BookOpen, Activity, Heart, Star, Globe, CheckCircle2 } from 'lucide-react';
 
 export const Home: React.FC = () => {
   return (

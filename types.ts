@@ -4,7 +4,11 @@ export interface ServiceItem {
   title: string;
   description: string;
   features: string[];
-  icon: React.ComponentType<any>;
+  icon: React.ComponentType<{
+    className?: string;
+    size?: number | string;
+    strokeWidth?: number | string;
+  }>;
 }
 
 export interface Testimonial {
