@@ -338,7 +338,7 @@ function CourseLoginCard({ onAuthSuccess }: { onAuthSuccess: (user: User | null)
     const { error: googleError } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: window.location.href,
+        redirectTo: window.location.origin,
       },
     });
 
@@ -407,8 +407,11 @@ function CourseLoginCard({ onAuthSuccess }: { onAuthSuccess: (user: User | null)
         type="button"
         onClick={signInWithGoogle}
         disabled={isLoading}
-        className="mb-5 w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm font-bold text-gray-700 shadow-sm transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+        className="mb-5 flex w-full items-center justify-center gap-3 rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm font-bold text-gray-700 shadow-sm transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
       >
+        <span className="flex h-5 w-5 items-center justify-center rounded-full border border-gray-200 text-xs font-black text-blue-600">
+          G
+        </span>
         {loadingAction === 'google' ? 'Connecting...' : 'Sign in with Google'}
       </button>
 
