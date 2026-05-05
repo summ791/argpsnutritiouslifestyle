@@ -976,8 +976,8 @@ export const Courses: React.FC = () => {
       setActivityError('');
 
       const { data, error } = await supabase
-        .from('user_activity')
-        .select('course_name')
+        .from('app_progress')
+        .select('*')
         .eq('user_id', user.id);
 
       if (!isMounted) return;
@@ -1041,12 +1041,13 @@ export const Courses: React.FC = () => {
     setActivityError('');
 
     if (!startedCourses.has(mod.title)) {
-      const { error } = await supabase.from('user_activity').insert({
-        user_id: user.id,
-        course_name: mod.title,
-        progress: 'Started',
-        created_at: new Date().toISOString(),
-      });
+      const { error } = await supabase.from('app_progress').insert([
+        {
+          user_id: user.id,
+          course_name: mod.title,
+          progress: 'Started',
+        },
+      ]);
 
       if (error) {
         setActivityError(error.message);
