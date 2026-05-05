@@ -399,7 +399,7 @@ function CourseLoginCard({ onAuthSuccess }: { onAuthSuccess: (user: User | null)
         <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary-600">Courses</p>
         <h1 className="mt-2 font-serif text-2xl font-bold text-primary-900">Login to access courses</h1>
         <p className="mt-2 text-sm leading-6 text-gray-500">
-          Sign in to access ARGPS course content and save your learning activity.
+          Log in to access ARGPS Nutritious Lifestyle courses and save your learning activity.
         </p>
       </div>
 
