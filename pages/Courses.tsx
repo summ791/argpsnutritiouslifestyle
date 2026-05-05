@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import type { User } from '@supabase/supabase-js';
+import { supabase } from '../services/supabaseClient';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 type Lesson = {
@@ -44,6 +46,10 @@ type FoodItem = {
   protein: number;
   carbs: number;
   fat: number;
+};
+
+type UserActivity = {
+  course_name: string;
 };
 
 // ─── Course Data ─────────────────────────────────────────────────────────────
@@ -294,6 +300,11 @@ function overallProgressPct(p: Progress) {
   return total ? Math.round((done / total) * 100) : 0;
 }
 
+function getUserDisplayName(user: User) {
+  const name = user.user_metadata?.full_name;
+  return typeof name === 'string' && name.trim() ? name : user.email ?? 'Course member';
+}
+
 // ─── Sub-components ───────────────────────────────────────────────────────────
 function ProgressBar({ value }: { value: number }) {
   return (
@@ -307,6 +318,153 @@ function ProgressBar({ value }: { value: number }) {
 }
 
 // ─── Views ────────────────────────────────────────────────────────────────────
+function CourseLoginCard({ onAuthSuccess }: { onAuthSuccess: (user: User | null) => void }) {
+  const [email, setEmail] = useState('');
+  const [otp, setOtp] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
+  const [loadingAction, setLoadingAction] = useState<'google' | 'send-otp' | 'verify-otp' | null>(null);
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+
+  const resetStatus = () => {
+    setMessage('');
+    setError('');
+  };
+
+  const signInWithGoogle = async () => {
+    resetStatus();
+    setLoadingAction('google');
+
+    const { error: googleError } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.href,
+      },
+    });
+
+    if (googleError) {
+      setError(googleError.message);
+      setLoadingAction(null);
+    }
+  };
+
+  const sendOtp = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    resetStatus();
+    setLoadingAction('send-otp');
+
+    const { error: otpError } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        shouldCreateUser: true,
+      },
+    });
+
+    if (otpError) {
+      setError(otpError.message);
+    } else {
+      setOtpSent(true);
+      setMessage('OTP sent successfully. Check your email inbox.');
+    }
+
+    setLoadingAction(null);
+  };
+
+  const verifyOtp = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    resetStatus();
+    setLoadingAction('verify-otp');
+
+    const { data, error: verifyError } = await supabase.auth.verifyOtp({
+      email,
+      token: otp,
+      type: 'email',
+    });
+
+    if (verifyError) {
+      setError(verifyError.message);
+    } else {
+      setMessage('Login successful.');
+      onAuthSuccess(data.user);
+    }
+
+    setLoadingAction(null);
+  };
+
+  const isLoading = loadingAction !== null;
+
+  return (
+    <div className="mx-auto max-w-md rounded-2xl border border-primary-100 bg-white p-6 shadow-xl md:p-8">
+      <div className="mb-6 text-center">
+        <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary-600">Courses</p>
+        <h1 className="mt-2 font-serif text-2xl font-bold text-primary-900">Login to access courses</h1>
+        <p className="mt-2 text-sm leading-6 text-gray-500">
+          Sign in to access ARGPS course content and save your learning activity.
+        </p>
+      </div>
+
+      <button
+        type="button"
+        onClick={signInWithGoogle}
+        disabled={isLoading}
+        className="mb-5 w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm font-bold text-gray-700 shadow-sm transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        {loadingAction === 'google' ? 'Connecting...' : 'Sign in with Google'}
+      </button>
+
+      <form onSubmit={sendOtp} className="space-y-3">
+        <label htmlFor="course-email" className="block text-sm font-semibold text-gray-700">
+          Email
+        </label>
+        <input
+          id="course-email"
+          type="email"
+          value={email}
+          onChange={event => setEmail(event.target.value)}
+          required
+          placeholder="you@example.com"
+          className="w-full rounded-lg border border-gray-200 px-4 py-3 text-sm outline-none transition-colors focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+        />
+        <button
+          type="submit"
+          disabled={isLoading || !email}
+          className="w-full rounded-lg bg-primary-600 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {loadingAction === 'send-otp' ? 'Sending OTP...' : 'Send OTP'}
+        </button>
+      </form>
+
+      {otpSent && (
+        <form onSubmit={verifyOtp} className="mt-5 space-y-3">
+          <label htmlFor="course-otp" className="block text-sm font-semibold text-gray-700">
+            OTP
+          </label>
+          <input
+            id="course-otp"
+            type="text"
+            inputMode="numeric"
+            value={otp}
+            onChange={event => setOtp(event.target.value)}
+            required
+            placeholder="Enter OTP"
+            className="w-full rounded-lg border border-gray-200 px-4 py-3 text-sm outline-none transition-colors focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+          />
+          <button
+            type="submit"
+            disabled={isLoading || !otp}
+            className="w-full rounded-lg border border-primary-200 px-4 py-3 text-sm font-bold text-primary-700 transition-colors hover:bg-primary-50 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {loadingAction === 'verify-otp' ? 'Verifying...' : 'Verify OTP'}
+          </button>
+        </form>
+      )}
+
+      {message && <p className="mt-4 rounded-lg bg-green-50 px-3 py-2 text-sm font-medium text-green-700">{message}</p>}
+      {error && <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-700">{error}</p>}
+    </div>
+  );
+}
+
 type View =
   | { type: 'overview' }
   | { type: 'lesson'; moduleId: string; lessonId: string }
@@ -620,12 +778,14 @@ function MealBuilderView({ onBack }: { onBack: () => void }) {
 // ─── Overview (Module List) ───────────────────────────────────────────────────
 function OverviewView({
   progress,
+  startedCourses,
   onStartLesson,
   onStartQuiz,
   onMealBuilder,
 }: {
   progress: Progress;
-  onStartLesson: (mid: string, lid: string) => void;
+  startedCourses: Set<string>;
+  onStartLesson: (mod: Module) => void;
   onStartQuiz: (mid: string) => void;
   onMealBuilder: () => void;
 }) {
@@ -658,7 +818,10 @@ function OverviewView({
       <div className="flex flex-wrap gap-3 mb-10">
         {progress.lastVisited && (
           <button
-            onClick={() => onStartLesson(progress.lastVisited!.moduleId, progress.lastVisited!.lessonId)}
+            onClick={() => {
+              const mod = modules.find(item => item.id === progress.lastVisited?.moduleId);
+              if (mod) onStartLesson(mod);
+            }}
             className="bg-primary-600 text-white px-5 py-2.5 rounded-full text-sm font-medium hover:bg-primary-700 transition-colors">
             ▶ Resume Learning
           </button>
@@ -693,6 +856,7 @@ function OverviewView({
           const unlocked = isModuleUnlocked(progress, mod.id);
           const done = isModuleComplete(progress, mod.id);
           const quizScore = progress.quizScores[mod.id];
+          const hasStarted = startedCourses.has(mod.title);
 
           return (
             <div
@@ -730,9 +894,9 @@ function OverviewView({
               <div className="flex gap-2 flex-wrap">
                 {unlocked ? (
                   <button
-                    onClick={() => onStartLesson(mod.id, mod.lessons[0].id)}
+                    onClick={() => onStartLesson(mod)}
                     className="bg-primary-600 text-white px-4 py-2 rounded-full text-xs font-semibold hover:bg-primary-700 transition-colors">
-                    {pct === 0 ? 'Start' : pct === 100 ? 'Review' : 'Continue'} →
+                    {hasStarted || pct > 0 ? 'Continue Course' : 'Start Course'}
                   </button>
                 ) : (
                   <span className="text-xs text-gray-400">Complete previous module to unlock</span>
@@ -755,8 +919,82 @@ function OverviewView({
 
 // ─── Main Courses Page ────────────────────────────────────────────────────────
 export const Courses: React.FC = () => {
+  const [user, setUser] = useState<User | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [activityLoading, setActivityLoading] = useState(false);
+  const [activityError, setActivityError] = useState('');
+  const [logoutLoading, setLogoutLoading] = useState(false);
+  const [startedCourses, setStartedCourses] = useState<Set<string>>(new Set());
   const [progress, setProgress] = useState<Progress>(emptyProgress);
   const [view, setView] = useState<View>({ type: 'overview' });
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadUser = async () => {
+      const { data, error } = await supabase.auth.getUser();
+
+      if (!isMounted) return;
+
+      if (error) {
+        setActivityError(error.message);
+      }
+
+      setUser(data.user);
+      setAuthLoading(false);
+    };
+
+    void loadUser();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      setView({ type: 'overview' });
+      setActivityError('');
+      if (!session?.user) {
+        setStartedCourses(new Set());
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+
+    let isMounted = true;
+
+    const fetchActivity = async () => {
+      setActivityLoading(true);
+      setActivityError('');
+
+      const { data, error } = await supabase
+        .from('user_activity')
+        .select('course_name')
+        .eq('user_id', user.id);
+
+      if (!isMounted) return;
+
+      if (error) {
+        setActivityError(error.message);
+      } else {
+        const rows = (data ?? []) as UserActivity[];
+        setStartedCourses(new Set(rows.map(row => row.course_name)));
+      }
+
+      setActivityLoading(false);
+    };
+
+    void fetchActivity();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user]);
 
   useEffect(() => {
     setProgress(readProgress());
@@ -794,12 +1032,98 @@ export const Courses: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const startCourse = async (mod: Module) => {
+    if (!user) return;
+
+    setActivityError('');
+
+    if (!startedCourses.has(mod.title)) {
+      const { error } = await supabase.from('user_activity').insert({
+        user_id: user.id,
+        course_name: mod.title,
+        progress: 'Started',
+        created_at: new Date().toISOString(),
+      });
+
+      if (error) {
+        setActivityError(error.message);
+        return;
+      }
+
+      setStartedCourses(previous => new Set(previous).add(mod.title));
+    }
+
+    goToLesson(mod.id, mod.lessons[0].id);
+  };
+
+  const logout = async () => {
+    setLogoutLoading(true);
+    setActivityError('');
+
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+      setActivityError(error.message);
+    } else {
+      setUser(null);
+      setStartedCourses(new Set());
+    }
+
+    setLogoutLoading(false);
+  };
+
+  if (authLoading) {
+    return (
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-16">
+        <div className="rounded-2xl border border-primary-100 bg-primary-50 p-8 text-center font-semibold text-primary-900">
+          Loading courses...
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-16">
+        <CourseLoginCard onAuthSuccess={setUser} />
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-16">
+      <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-primary-100 bg-primary-50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary-600">Signed in</p>
+          <p className="mt-1 text-sm font-semibold text-primary-950">{getUserDisplayName(user)}</p>
+        </div>
+        <button
+          type="button"
+          onClick={logout}
+          disabled={logoutLoading}
+          className="rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm font-bold text-primary-700 transition-colors hover:bg-primary-100 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {logoutLoading ? 'Logging out...' : 'Logout'}
+        </button>
+      </div>
+
+      {activityLoading && (
+        <p className="mb-4 rounded-lg bg-blue-50 px-4 py-3 text-sm font-medium text-blue-700">
+          Loading your course activity...
+        </p>
+      )}
+
+      {activityError && (
+        <p className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+          {activityError}
+        </p>
+      )}
+
       {view.type === 'overview' && (
         <OverviewView
           progress={progress}
-          onStartLesson={goToLesson}
+          startedCourses={startedCourses}
+          onStartLesson={startCourse}
           onStartQuiz={mid => { setView({ type: 'quiz', moduleId: mid }); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
           onMealBuilder={() => { setView({ type: 'meal-builder' }); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
         />
