@@ -389,6 +389,7 @@ function ProgressBar({ value }: { value: number }) {
 
 // ─── Views ────────────────────────────────────────────────────────────────────
 function CourseLoginCard({ onAuthSuccess }: { onAuthSuccess: (user: User | null) => void }) {
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [otp, setOtp] = useState('');
@@ -410,7 +411,7 @@ function CourseLoginCard({ onAuthSuccess }: { onAuthSuccess: (user: User | null)
     const { error: googleError } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}${window.location.pathname}${window.location.search}#/courses`,
+        redirectTo: window.location.origin + '/courses',
       },
     });
 
@@ -435,6 +436,7 @@ function CourseLoginCard({ onAuthSuccess }: { onAuthSuccess: (user: User | null)
     } else {
       setMessage('Login successful.');
       onAuthSuccess(data.user);
+      navigate('/courses', { replace: true });
     }
 
     setLoadingAction(null);
@@ -498,6 +500,7 @@ function CourseLoginCard({ onAuthSuccess }: { onAuthSuccess: (user: User | null)
     } else {
       onAuthSuccess(data.user);
       setMessage('Login successful.');
+      navigate('/courses', { replace: true });
     }
 
     setLoadingAction(null);
@@ -1106,8 +1109,8 @@ export const Courses: React.FC = () => {
   useEffect(() => {
     let isMounted = true;
 
-    const loadUser = async () => {
-      const { data, error } = await supabase.auth.getUser();
+    const loadSession = async () => {
+      const { data, error } = await supabase.auth.getSession();
 
       if (!isMounted) return;
 
@@ -1115,15 +1118,15 @@ export const Courses: React.FC = () => {
         setActivityError(error.message);
       }
 
-      setUser(data.user);
+      setUser(data.session?.user ?? null);
       setAuthLoading(false);
     };
 
-    void loadUser();
+    void loadSession();
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null);
       setAppUserProfile(session?.user ? undefined : null);
       setView({ type: 'overview' });
@@ -1131,6 +1134,8 @@ export const Courses: React.FC = () => {
       setProfileError('');
       if (!session?.user) {
         setStartedCourses(new Set());
+      } else if (event === 'SIGNED_IN' && location.pathname !== '/courses') {
+        navigate('/courses', { replace: true });
       }
     });
 
@@ -1138,7 +1143,7 @@ export const Courses: React.FC = () => {
       isMounted = false;
       subscription.unsubscribe();
     };
-  }, []);
+  }, [location.pathname, navigate]);
 
   useEffect(() => {
     if (!user) return;
@@ -1217,9 +1222,7 @@ export const Courses: React.FC = () => {
       setAppUserProfile(profile);
       setProfileLoading(false);
 
-      if (!isProfileComplete(profile) && location.pathname !== '/onboarding') {
-        navigate('/onboarding');
-      } else if (isProfileComplete(profile) && location.pathname === '/onboarding') {
+      if (isProfileComplete(profile) && location.pathname === '/onboarding') {
         navigate('/courses');
       }
     };
@@ -1407,16 +1410,6 @@ export const Courses: React.FC = () => {
     );
   }
 
-  if (!isProfileComplete(appUserProfile)) {
-    return (
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-16">
-        <div className="rounded-2xl border border-primary-100 bg-primary-50 p-8 text-center font-semibold text-primary-900">
-          Redirecting to onboarding...
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-16">
       <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-primary-100 bg-primary-50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
@@ -1430,7 +1423,7 @@ export const Courses: React.FC = () => {
             onClick={() => navigate('/profile')}
             className="rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm font-bold text-primary-700 transition-colors hover:bg-primary-100"
           >
-            My Profile
+            {isProfileComplete(appUserProfile) ? 'My Profile' : 'Complete Profile'}
           </button>
           <button
             type="button"
