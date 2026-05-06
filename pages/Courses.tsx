@@ -53,7 +53,9 @@ type FoodItem = {
 };
 
 type UserActivity = {
+  id?: string;
   course_name: string;
+  progress?: string | null;
 };
 
 // ─── Course Data ─────────────────────────────────────────────────────────────
@@ -268,6 +270,7 @@ const foodItems: FoodItem[] = [
 
 // ─── Progress Helpers ─────────────────────────────────────────────────────────
 const PROGRESS_KEY = 'fuelsense-progress-v1';
+const COURSE_PROGRESS_ROW = 'ARGPS_SEQUENTIAL_PROGRESS';
 const emptyProgress: Progress = {
   completedLessons: {},
   quizScores: {},
@@ -299,6 +302,50 @@ function writeProgress(p: Progress) {
   localStorage.setItem(PROGRESS_KEY, JSON.stringify(p));
 }
 
+async function saveProgressToSupabase(userId: string, progress: Progress) {
+  const payload = {
+    user_id: userId,
+    course_name: COURSE_PROGRESS_ROW,
+    progress: JSON.stringify(progress),
+  };
+
+  const { data: rows, error: readError } = await supabase
+    .from('app_progress')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('course_name', COURSE_PROGRESS_ROW)
+    .limit(1);
+
+  if (readError) {
+    return { error: readError };
+  }
+
+  const existingId = (rows as { id: string }[] | null)?.[0]?.id;
+  if (existingId) {
+    return supabase
+      .from('app_progress')
+      .update(payload)
+      .eq('id', existingId);
+  }
+
+  return supabase.from('app_progress').insert([
+    {
+      user_id: userId,
+      course_name: COURSE_PROGRESS_ROW,
+      progress: JSON.stringify(progress),
+    },
+  ]);
+}
+
+function parseRemoteProgress(value: string | null | undefined) {
+  if (!value) return null;
+  try {
+    return normalizeProgress(JSON.parse(value) as Partial<Progress>);
+  } catch {
+    return null;
+  }
+}
+
 function moduleProgressPct(p: Progress, moduleId: string) {
   const m = modules.find(x => x.id === moduleId);
   if (!m) return 0;
@@ -316,8 +363,8 @@ function isModuleUnlocked(p: Progress, moduleId: string) {
 }
 
 function overallProgressPct(p: Progress) {
-  const total = modules.reduce((a, m) => a + m.lessons.length, 0);
-  const done = Object.values(p.completedLessons).filter(Boolean).length;
+  const total = modules.length;
+  const done = modules.filter(module => isModuleComplete(p, module.id)).length;
   return total ? Math.round((done / total) * 100) : 0;
 }
 
@@ -591,11 +638,10 @@ function LessonView({
   const lesson = mod.lessons.find(l => l.id === lessonId)!;
   const isCompleted = !!progress.completedLessons[`${moduleId}:${lessonId}`];
 
-  // find next lesson/module
-  const allLessons: { moduleId: string; lessonId: string }[] = [];
-  modules.forEach(m => m.lessons.forEach(l => allLessons.push({ moduleId: m.id, lessonId: l.id })));
-  const idx = allLessons.findIndex(x => x.moduleId === moduleId && x.lessonId === lessonId);
-  const nextLesson = idx < allLessons.length - 1 ? allLessons[idx + 1] : null;
+  const lessonIndex = mod.lessons.findIndex(item => item.id === lessonId);
+  const nextLesson = lessonIndex >= 0 && lessonIndex < mod.lessons.length - 1
+    ? mod.lessons[lessonIndex + 1]
+    : null;
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -646,14 +692,19 @@ function LessonView({
       )}
       {isCompleted && nextLesson && (
         <button
-          onClick={() => onNext(nextLesson.moduleId, nextLesson.lessonId)}
+          onClick={() => onNext(moduleId, nextLesson.id)}
           className="w-full bg-primary-600 text-white py-4 rounded-xl font-semibold hover:bg-primary-700 transition-colors mb-3"
         >
           Next Lesson →
         </button>
       )}
       {isCompleted && !nextLesson && (
-        <div className="text-center py-4 text-green-600 font-semibold">🎉 Course Complete!</div>
+        <button
+          onClick={onComplete}
+          className="w-full bg-primary-600 text-white py-4 rounded-xl font-semibold hover:bg-primary-700 transition-colors mb-3"
+        >
+          Continue to Quiz
+        </button>
       )}
     </div>
   );
@@ -661,22 +712,31 @@ function LessonView({
 
 // ─── Quiz View ────────────────────────────────────────────────────────────────
 function QuizView({
-  moduleId, progress, onSave, onBack,
+  moduleId, progress, onSave, onBack, onContinue,
 }: {
   moduleId: string; progress: Progress;
-  onSave: (score: number, total: number) => void; onBack: () => void;
+  onSave: (score: number, total: number) => void; onBack: () => void; onContinue: () => void;
 }) {
   const mod = modules.find(m => m.id === moduleId)!;
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [submitted, setSubmitted] = useState(false);
+  const [savedScore, setSavedScore] = useState(0);
 
-  const score = submitted
-    ? mod.quiz.filter(q => answers[q.id] === q.answer).length
-    : 0;
+  const passScore = Math.ceil(mod.quiz.length * 0.7);
+  const score = submitted ? savedScore : 0;
+  const passed = score >= passScore;
 
   function submit() {
+    const nextScore = mod.quiz.filter(q => answers[q.id] === q.answer).length;
+    setSavedScore(nextScore);
     setSubmitted(true);
-    onSave(score, mod.quiz.length);
+    onSave(nextScore, mod.quiz.length);
+  }
+
+  function retry() {
+    setAnswers({});
+    setSavedScore(0);
+    setSubmitted(false);
   }
 
   return (
@@ -693,11 +753,11 @@ function QuizView({
       </div>
 
       {submitted && (
-        <div className={`rounded-2xl p-6 mb-8 text-center ${score >= Math.ceil(mod.quiz.length * 0.7) ? 'bg-green-50 border border-green-200' : 'bg-amber-50 border border-amber-200'}`}>
-          <div className="text-4xl mb-2">{score >= Math.ceil(mod.quiz.length * 0.7) ? '🎉' : '📚'}</div>
+        <div className={`rounded-2xl p-6 mb-8 text-center ${passed ? 'bg-green-50 border border-green-200' : 'bg-amber-50 border border-amber-200'}`}>
+          <div className="text-4xl mb-2">{passed ? '🎉' : '📚'}</div>
           <div className="text-2xl font-bold text-gray-900">{score}/{mod.quiz.length}</div>
           <div className="text-gray-600 mt-1">
-            {score >= Math.ceil(mod.quiz.length * 0.7) ? 'Well done!' : 'Keep studying and try again!'}
+            {passed ? 'Well done!' : 'Keep studying and try again!'}
           </div>
         </div>
       )}
@@ -754,9 +814,20 @@ function QuizView({
         </button>
       )}
       {submitted && (
-        <button onClick={onBack} className="w-full mt-8 border border-primary-300 text-primary-700 py-4 rounded-xl font-semibold hover:bg-primary-50 transition-colors">
-          ← Back to Modules
-        </button>
+        <div className="mt-8 space-y-3">
+          {passed ? (
+            <button onClick={onContinue} className="w-full bg-primary-600 text-white py-4 rounded-xl font-semibold hover:bg-primary-700 transition-colors">
+              Continue
+            </button>
+          ) : (
+            <button onClick={retry} className="w-full bg-primary-600 text-white py-4 rounded-xl font-semibold hover:bg-primary-700 transition-colors">
+              Retry Quiz
+            </button>
+          )}
+          <button onClick={onBack} className="w-full border border-primary-300 text-primary-700 py-4 rounded-xl font-semibold hover:bg-primary-50 transition-colors">
+            Back to Modules
+          </button>
+        </div>
       )}
     </div>
   );
@@ -888,13 +959,11 @@ function OverviewView({
   progress,
   startedCourses,
   onStartLesson,
-  onStartQuiz,
   onMealBuilder,
 }: {
   progress: Progress;
   startedCourses: Set<string>;
   onStartLesson: (mod: Module) => void;
-  onStartQuiz: (mid: string) => void;
   onMealBuilder: () => void;
 }) {
   const overall = overallProgressPct(progress);
@@ -1009,13 +1078,6 @@ function OverviewView({
                 ) : (
                   <span className="text-xs text-gray-400">Complete previous module to unlock</span>
                 )}
-                {pct === 100 && (
-                  <button
-                    onClick={() => onStartQuiz(mod.id)}
-                    className="border border-primary-300 text-primary-700 px-4 py-2 rounded-full text-xs font-semibold hover:bg-primary-50 transition-colors">
-                    {quizScore ? 'Retake Quiz' : 'Take Quiz'}
-                  </button>
-                )}
               </div>
             </div>
           );
@@ -1098,7 +1160,25 @@ export const Courses: React.FC = () => {
         setActivityError(error.message);
       } else {
         const rows = (data ?? []) as UserActivity[];
-        setStartedCourses(new Set(rows.map(row => row.course_name)));
+        const remoteProgress = rows
+          .filter(row => row.course_name === COURSE_PROGRESS_ROW)
+          .map(row => parseRemoteProgress(row.progress))
+          .find((item): item is Progress => item !== null);
+
+        if (remoteProgress) {
+          writeProgress(remoteProgress);
+          setProgress(remoteProgress);
+        } else {
+          const initialProgress = normalizeProgress(null);
+          writeProgress(initialProgress);
+          setProgress(initialProgress);
+        }
+
+        setStartedCourses(new Set(
+          rows
+            .filter(row => row.course_name !== COURSE_PROGRESS_ROW)
+            .map(row => row.course_name)
+        ));
       }
 
       setActivityLoading(false);
@@ -1162,27 +1242,61 @@ export const Courses: React.FC = () => {
     };
   }, []);
 
+  const persistProgress = useCallback((nextProgress: Progress) => {
+    const normalized = normalizeProgress(nextProgress);
+    writeProgress(normalized);
+    setProgress({ ...normalized });
+
+    if (user) {
+      void saveProgressToSupabase(user.id, normalized).then(({ error }) => {
+        if (error) {
+          setActivityError(error.message);
+        }
+      });
+    }
+  }, [user]);
+
   const markComplete = useCallback((moduleId: string, lessonId: string) => {
     const p = readProgress();
+    const mod = modules.find(item => item.id === moduleId);
+    const isLastLesson = mod?.lessons[mod.lessons.length - 1]?.id === lessonId;
+
     p.completedLessons[`${moduleId}:${lessonId}`] = true;
     p.lastVisited = { moduleId, lessonId };
-    writeProgress(p);
-    setProgress({ ...p });
-  }, []);
+    persistProgress(p);
+
+    if (isLastLesson) {
+      setView({ type: 'quiz', moduleId });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [persistProgress]);
 
   const saveQuiz = useCallback((moduleId: string, score: number, total: number) => {
     const p = readProgress();
     const prev = p.quizScores[moduleId];
-    if (!prev || score > prev.score) p.quizScores[moduleId] = { score, total };
-    writeProgress(p);
-    setProgress({ ...p });
-  }, []);
+    const passed = score >= Math.ceil(total * 0.7);
+    const bestScore = Math.max(prev?.score ?? 0, score);
+    const hasPassed = prev?.passed === true || passed;
+
+    p.quizScores[moduleId] = { score: bestScore, total, passed: hasPassed };
+
+    if (passed) {
+      p.completedModules = { ...(p.completedModules ?? {}), [moduleId]: true };
+
+      const moduleIndex = modules.findIndex(item => item.id === moduleId);
+      const nextModule = moduleIndex >= 0 ? modules[moduleIndex + 1] : undefined;
+      if (nextModule) {
+        p.unlockedModules = { ...(p.unlockedModules ?? {}), [nextModule.id]: true };
+      }
+    }
+
+    persistProgress(p);
+  }, [persistProgress]);
 
   const goToLesson = (mid: string, lid: string) => {
     const p = readProgress();
     p.lastVisited = { moduleId: mid, lessonId: lid };
-    writeProgress(p);
-    setProgress({ ...p });
+    persistProgress(p);
     setView({ type: 'lesson', moduleId: mid, lessonId: lid });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -1191,6 +1305,19 @@ export const Courses: React.FC = () => {
     if (!user) return;
 
     setActivityError('');
+
+    const currentProgress = readProgress();
+    if (!isModuleUnlocked(currentProgress, mod.id)) {
+      setActivityError('Complete and pass the previous module quiz to unlock this module.');
+      setView({ type: 'overview' });
+      return;
+    }
+
+    if (moduleProgressPct(currentProgress, mod.id) === 100 && !isModuleComplete(currentProgress, mod.id)) {
+      setView({ type: 'quiz', moduleId: mod.id });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
 
     if (!startedCourses.has(mod.title)) {
       const { error } = await supabase.from('app_progress').insert([
@@ -1210,6 +1337,20 @@ export const Courses: React.FC = () => {
     }
 
     goToLesson(mod.id, mod.lessons[0].id);
+  };
+
+  const continueAfterQuiz = (moduleId: string) => {
+    const currentProgress = readProgress();
+    const moduleIndex = modules.findIndex(item => item.id === moduleId);
+    const nextModule = moduleIndex >= 0 ? modules[moduleIndex + 1] : undefined;
+
+    if (nextModule && isModuleUnlocked(currentProgress, nextModule.id)) {
+      void startCourse(nextModule);
+      return;
+    }
+
+    setView({ type: 'overview' });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const logout = async () => {
@@ -1319,7 +1460,6 @@ export const Courses: React.FC = () => {
           progress={progress}
           startedCourses={startedCourses}
           onStartLesson={startCourse}
-          onStartQuiz={mid => { setView({ type: 'quiz', moduleId: mid }); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
           onMealBuilder={() => { setView({ type: 'meal-builder' }); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
         />
       )}
@@ -1338,6 +1478,7 @@ export const Courses: React.FC = () => {
           moduleId={view.moduleId}
           progress={progress}
           onSave={(score, total) => saveQuiz(view.moduleId, score, total)}
+          onContinue={() => continueAfterQuiz(view.moduleId)}
           onBack={() => setView({ type: 'overview' })}
         />
       )}
