@@ -321,14 +321,12 @@ function ProgressBar({ value }: { value: number }) {
 function CourseLoginCard({ onAuthSuccess }: { onAuthSuccess: (user: User | null) => void }) {
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
-  const [otpSent, setOtpSent] = useState(false);
+  const [showOtp, setShowOtp] = useState(false);
   const [loadingAction, setLoadingAction] = useState<'google' | 'send-otp' | 'verify-otp' | null>(null);
   const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
 
   const resetStatus = () => {
     setMessage('');
-    setError('');
   };
 
   const signInWithGoogle = async () => {
@@ -343,49 +341,47 @@ function CourseLoginCard({ onAuthSuccess }: { onAuthSuccess: (user: User | null)
     });
 
     if (googleError) {
-      setError(googleError.message);
+      setMessage(googleError.message);
       setLoadingAction(null);
     }
   };
 
-  const sendOtp = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const sendOtp = async () => {
     resetStatus();
     setLoadingAction('send-otp');
 
-    const { error: otpError } = await supabase.auth.signInWithOtp({
+    const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
         shouldCreateUser: true,
       },
     });
 
-    if (otpError) {
-      setError(otpError.message);
+    if (error) {
+      setMessage(error.message);
     } else {
-      setOtpSent(true);
-      setMessage('OTP sent successfully. Check your email inbox.');
+      setShowOtp(true);
+      setMessage('OTP sent successfully');
     }
 
     setLoadingAction(null);
   };
 
-  const verifyOtp = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const verifyOtp = async () => {
     resetStatus();
     setLoadingAction('verify-otp');
 
-    const { data, error: verifyError } = await supabase.auth.verifyOtp({
+    const { data, error } = await supabase.auth.verifyOtp({
       email,
       token: otp,
       type: 'email',
     });
 
-    if (verifyError) {
-      setError(verifyError.message);
+    if (error) {
+      setMessage(error.message);
     } else {
-      setMessage('Login successful.');
       onAuthSuccess(data.user);
+      setMessage('Login successful');
     }
 
     setLoadingAction(null);
@@ -415,7 +411,13 @@ function CourseLoginCard({ onAuthSuccess }: { onAuthSuccess: (user: User | null)
         {loadingAction === 'google' ? 'Connecting...' : 'Sign in with Google'}
       </button>
 
-      <form onSubmit={sendOtp} className="space-y-3">
+      <form
+        onSubmit={event => {
+          event.preventDefault();
+          void sendOtp();
+        }}
+        className="space-y-3"
+      >
         <label htmlFor="course-email" className="block text-sm font-semibold text-gray-700">
           Email
         </label>
@@ -437,8 +439,14 @@ function CourseLoginCard({ onAuthSuccess }: { onAuthSuccess: (user: User | null)
         </button>
       </form>
 
-      {otpSent && (
-        <form onSubmit={verifyOtp} className="mt-5 space-y-3">
+      {showOtp && (
+        <form
+          onSubmit={event => {
+            event.preventDefault();
+            void verifyOtp();
+          }}
+          className="mt-5 space-y-3"
+        >
           <label htmlFor="course-otp" className="block text-sm font-semibold text-gray-700">
             OTP
           </label>
@@ -463,7 +471,6 @@ function CourseLoginCard({ onAuthSuccess }: { onAuthSuccess: (user: User | null)
       )}
 
       {message && <p className="mt-4 rounded-lg bg-green-50 px-3 py-2 text-sm font-medium text-green-700">{message}</p>}
-      {error && <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-700">{error}</p>}
     </div>
   );
 }
