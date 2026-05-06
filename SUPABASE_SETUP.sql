@@ -12,8 +12,17 @@ create extension if not exists "pgcrypto";
 create table if not exists public.app_user (
   id uuid primary key references auth.users(id) on delete cascade,
   email text,
+  full_name text,
+  age integer,
+  password_setup boolean not null default false,
   created_at timestamptz default now()
 );
+
+alter table public.app_user
+add column if not exists full_name text,
+add column if not exists age integer,
+add column if not exists password_setup boolean not null default false,
+add column if not exists created_at timestamptz default now();
 
 -- =========================================
 -- 2. CREATE app_progress TABLE
@@ -52,10 +61,17 @@ security definer
 set search_path = public
 as $$
 begin
-  insert into public.app_user (id, email)
-  values (new.id, new.email)
+  insert into public.app_user (id, email, full_name, password_setup)
+  values (
+    new.id,
+    new.email,
+    nullif(new.raw_user_meta_data ->> 'full_name', ''),
+    false
+  )
   on conflict (id) do update
-  set email = excluded.email;
+  set
+    email = excluded.email,
+    full_name = coalesce(public.app_user.full_name, excluded.full_name);
 
   return new;
 end;

@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import type { User } from '@supabase/supabase-js';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../services/supabaseClient';
+import { getAppUserProfile, isProfileComplete, type AppUserProfile } from '../services/auth';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 type Lesson = {
@@ -300,8 +302,10 @@ function overallProgressPct(p: Progress) {
   return total ? Math.round((done / total) * 100) : 0;
 }
 
-function getUserDisplayName(user: User) {
-  const name = user.user_metadata?.full_name;
+function getUserDisplayName(user: User, profile: AppUserProfile | null) {
+  const profileName = profile?.full_name;
+  const metadataName = user.user_metadata?.full_name;
+  const name = profileName || metadataName;
   return typeof name === 'string' && name.trim() ? name : user.email ?? 'Course member';
 }
 
@@ -320,14 +324,17 @@ function ProgressBar({ value }: { value: number }) {
 // ─── Views ────────────────────────────────────────────────────────────────────
 function CourseLoginCard({ onAuthSuccess }: { onAuthSuccess: (user: User | null) => void }) {
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [otp, setOtp] = useState('');
   const [showOtp, setShowOtp] = useState(false);
-  const [loadingAction, setLoadingAction] = useState<'google' | 'send-otp' | 'verify-otp' | null>(null);
+  const [loadingAction, setLoadingAction] = useState<'google' | 'password' | 'send-otp' | 'verify-otp' | null>(null);
   const [message, setMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
   const [resendCooldown, setResendCooldown] = useState(0);
 
   const resetStatus = () => {
     setMessage('');
+    setErrorMessage('');
   };
 
   const signInWithGoogle = async () => {
@@ -337,14 +344,34 @@ function CourseLoginCard({ onAuthSuccess }: { onAuthSuccess: (user: User | null)
     const { error: googleError } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: window.location.origin,
+        redirectTo: `${window.location.origin}${window.location.pathname}${window.location.search}#/courses`,
       },
     });
 
     if (googleError) {
-      setMessage(googleError.message);
+      setErrorMessage(googleError.message);
       setLoadingAction(null);
     }
+  };
+
+  const signInWithPassword = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    resetStatus();
+    setLoadingAction('password');
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password,
+    });
+
+    if (error) {
+      setErrorMessage(error.message);
+    } else {
+      setMessage('Login successful.');
+      onAuthSuccess(data.user);
+    }
+
+    setLoadingAction(null);
   };
 
   useEffect(() => {
@@ -366,6 +393,7 @@ function CourseLoginCard({ onAuthSuccess }: { onAuthSuccess: (user: User | null)
       return;
     }
 
+    resetStatus();
     setLoadingAction('send-otp');
 
     const { error } = await supabase.auth.signInWithOtp({
@@ -376,12 +404,11 @@ function CourseLoginCard({ onAuthSuccess }: { onAuthSuccess: (user: User | null)
     });
 
     if (error) {
-      console.error(error);
-      alert(error.message);
+      setErrorMessage(error.message);
       setResendCooldown(0);
     } else {
       setShowOtp(true);
-      alert('OTP sent successfully');
+      setMessage('OTP sent successfully. Check your email.');
       setResendCooldown(60);
     }
 
@@ -389,23 +416,22 @@ function CourseLoginCard({ onAuthSuccess }: { onAuthSuccess: (user: User | null)
   };
 
   const verifyOtp = async () => {
+    resetStatus();
     setLoadingAction('verify-otp');
 
     const { data, error } = await supabase.auth.verifyOtp({
       email: email.trim(),
       token: otp.trim(),
-      type: 'signup'
+      type: 'email'
     });
 
     if (error) {
-      console.error(error);
-      alert(error.message);
+      setErrorMessage(error.message);
       setLoadingAction(null);
       return;
     } else {
       onAuthSuccess(data.user);
-      alert('Login successful');
-      window.location.href = '/';
+      setMessage('Login successful.');
     }
 
     setLoadingAction(null);
@@ -435,7 +461,7 @@ function CourseLoginCard({ onAuthSuccess }: { onAuthSuccess: (user: User | null)
         {loadingAction === 'google' ? 'Connecting...' : 'Sign in with Google'}
       </button>
 
-      <form className="space-y-3">
+      <form onSubmit={signInWithPassword} className="space-y-3">
         <label htmlFor="course-email" className="block text-sm font-semibold text-gray-700">
           Email
         </label>
@@ -448,6 +474,33 @@ function CourseLoginCard({ onAuthSuccess }: { onAuthSuccess: (user: User | null)
           placeholder="you@example.com"
           className="w-full rounded-lg border border-gray-200 px-4 py-3 text-sm outline-none transition-colors focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
         />
+        <label htmlFor="course-password" className="block text-sm font-semibold text-gray-700">
+          Password
+        </label>
+        <input
+          id="course-password"
+          type="password"
+          value={password}
+          onChange={event => setPassword(event.target.value)}
+          placeholder="Use the password you created"
+          className="w-full rounded-lg border border-gray-200 px-4 py-3 text-sm outline-none transition-colors focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+        />
+        <button
+          type="submit"
+          disabled={isLoading || !email || !password}
+          className="w-full rounded-lg bg-primary-600 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {loadingAction === 'password' ? 'Signing in...' : 'Login with Password'}
+        </button>
+      </form>
+
+      <div className="my-5 flex items-center gap-3">
+        <div className="h-px flex-1 bg-gray-100" />
+        <span className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">or use OTP</span>
+        <div className="h-px flex-1 bg-gray-100" />
+      </div>
+
+      <form className="space-y-3">
         <button
           type="button"
           onClick={sendOtp}
@@ -495,6 +548,7 @@ function CourseLoginCard({ onAuthSuccess }: { onAuthSuccess: (user: User | null)
         </form>
       )}
 
+      {errorMessage && <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-700">{errorMessage}</p>}
       {message && <p className="mt-4 rounded-lg bg-green-50 px-3 py-2 text-sm font-medium text-green-700">{message}</p>}
     </div>
   );
@@ -955,13 +1009,18 @@ function OverviewView({
 // ─── Main Courses Page ────────────────────────────────────────────────────────
 export const Courses: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
+  const [appUserProfile, setAppUserProfile] = useState<AppUserProfile | null | undefined>(undefined);
   const [authLoading, setAuthLoading] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileError, setProfileError] = useState('');
   const [activityLoading, setActivityLoading] = useState(false);
   const [activityError, setActivityError] = useState('');
   const [logoutLoading, setLogoutLoading] = useState(false);
   const [startedCourses, setStartedCourses] = useState<Set<string>>(new Set());
   const [progress, setProgress] = useState<Progress>(emptyProgress);
   const [view, setView] = useState<View>({ type: 'overview' });
+  const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     let isMounted = true;
@@ -985,8 +1044,10 @@ export const Courses: React.FC = () => {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
+      setAppUserProfile(session?.user ? undefined : null);
       setView({ type: 'overview' });
       setActivityError('');
+      setProfileError('');
       if (!session?.user) {
         setStartedCourses(new Set());
       }
@@ -1030,6 +1091,46 @@ export const Courses: React.FC = () => {
       isMounted = false;
     };
   }, [user]);
+
+  useEffect(() => {
+    if (!user) {
+      setAppUserProfile(null);
+      setProfileLoading(false);
+      setProfileError('');
+      return;
+    }
+
+    let isMounted = true;
+
+    const loadProfile = async () => {
+      setProfileLoading(true);
+      setProfileError('');
+      const { profile, error } = await getAppUserProfile(user.id);
+      if (!isMounted) return;
+
+      if (error) {
+        setActivityError(error.message);
+        setProfileError(error.message);
+        setProfileLoading(false);
+        return;
+      }
+
+      setAppUserProfile(profile);
+      setProfileLoading(false);
+
+      if (!isProfileComplete(profile) && location.pathname !== '/onboarding') {
+        navigate('/onboarding');
+      } else if (isProfileComplete(profile) && location.pathname === '/onboarding') {
+        navigate('/courses');
+      }
+    };
+
+    void loadProfile();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user, location.pathname, navigate]);
 
   useEffect(() => {
     setProgress(readProgress());
@@ -1118,10 +1219,40 @@ export const Courses: React.FC = () => {
     );
   }
 
+  if (user && (profileLoading || appUserProfile === undefined)) {
+    return (
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-16">
+        <div className="rounded-2xl border border-primary-100 bg-primary-50 p-8 text-center font-semibold text-primary-900">
+          Loading your profile...
+        </div>
+      </div>
+    );
+  }
+
+  if (user && profileError) {
+    return (
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-16">
+        <div className="rounded-2xl border border-red-100 bg-red-50 p-8 text-center font-semibold text-red-700">
+          {profileError}
+        </div>
+      </div>
+    );
+  }
+
   if (!user) {
     return (
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-16">
         <CourseLoginCard onAuthSuccess={setUser} />
+      </div>
+    );
+  }
+
+  if (!isProfileComplete(appUserProfile)) {
+    return (
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-16">
+        <div className="rounded-2xl border border-primary-100 bg-primary-50 p-8 text-center font-semibold text-primary-900">
+          Redirecting to onboarding...
+        </div>
       </div>
     );
   }
@@ -1131,16 +1262,25 @@ export const Courses: React.FC = () => {
       <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-primary-100 bg-primary-50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary-600">Signed in</p>
-          <p className="mt-1 text-sm font-semibold text-primary-950">{getUserDisplayName(user)}</p>
+          <p className="mt-1 text-sm font-semibold text-primary-950">{getUserDisplayName(user, appUserProfile)}</p>
         </div>
-        <button
-          type="button"
-          onClick={logout}
-          disabled={logoutLoading}
-          className="rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm font-bold text-primary-700 transition-colors hover:bg-primary-100 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {logoutLoading ? 'Logging out...' : 'Logout'}
-        </button>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <button
+            type="button"
+            onClick={() => navigate('/profile')}
+            className="rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm font-bold text-primary-700 transition-colors hover:bg-primary-100"
+          >
+            My Profile
+          </button>
+          <button
+            type="button"
+            onClick={logout}
+            disabled={logoutLoading}
+            className="rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm font-bold text-primary-700 transition-colors hover:bg-primary-100 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {logoutLoading ? 'Logging out...' : 'Logout'}
+          </button>
+        </div>
       </div>
 
       {activityLoading && (
