@@ -432,13 +432,7 @@ function CourseLoginCard({ onAuthSuccess }: { onAuthSuccess: (user: User | null)
         {loadingAction === 'google' ? 'Connecting...' : 'Sign in with Google'}
       </button>
 
-      <form
-        onSubmit={event => {
-          event.preventDefault();
-          void sendOtp();
-        }}
-        className="space-y-3"
-      >
+      <form className="space-y-3">
         <label htmlFor="course-email" className="block text-sm font-semibold text-gray-700">
           Email
         </label>
@@ -452,7 +446,8 @@ function CourseLoginCard({ onAuthSuccess }: { onAuthSuccess: (user: User | null)
           className="w-full rounded-lg border border-gray-200 px-4 py-3 text-sm outline-none transition-colors focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
         />
         <button
-          type="submit"
+          type="button"
+          onClick={sendOtp}
           disabled={isLoading || !email || resendCooldown > 0}
           className="w-full rounded-lg bg-primary-600 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60"
         >
