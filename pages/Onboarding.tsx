@@ -2,8 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { User } from '@supabase/supabase-js';
 import {
-  getAppUserProfile,
   getCurrentUser,
+  ensureAppUserProfile,
   isProfileComplete,
   updateAuthProfile,
   upsertAppUserProfile,
@@ -38,7 +38,7 @@ export const Onboarding: React.FC = () => {
       }
 
       setUser(data.user);
-      const { profile: storedProfile, error: profileError } = await getAppUserProfile(data.user.id);
+      const { profile: storedProfile, error: profileError } = await ensureAppUserProfile(data.user);
       if (!isMounted) return;
 
       if (profileError) {

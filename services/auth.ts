@@ -1,3 +1,4 @@
+import type { User } from '@supabase/supabase-js';
 import { supabase } from './supabaseClient';
 
 export type AppUserProfile = {
@@ -12,8 +13,8 @@ export type AppUserProfile = {
 export type AppUserProfileInput = {
   id: string;
   email: string | null;
-  full_name: string;
-  age: number;
+  full_name: string | null;
+  age: number | null;
   password_setup: boolean;
   created_at?: string | null;
 };
@@ -39,7 +40,39 @@ export async function getAppUserProfile(userId: string) {
 }
 
 export async function upsertAppUserProfile(profile: AppUserProfileInput) {
-  return supabase.from('app_user').upsert(profile, { onConflict: 'id' });
+  return supabase
+    .from('app_user')
+    .upsert(profile, { onConflict: 'id' })
+    .select('id,email,full_name,age,password_setup,created_at')
+    .maybeSingle();
+}
+
+export async function ensureAppUserProfile(user: User) {
+  const existing = await getAppUserProfile(user.id);
+
+  if (existing.error) {
+    return existing;
+  }
+
+  if (existing.profile) {
+    return existing;
+  }
+
+  const metadataName = user.user_metadata?.full_name;
+  const fullName = typeof metadataName === 'string' && metadataName.trim().length > 0
+    ? metadataName.trim()
+    : null;
+
+  const { data, error } = await upsertAppUserProfile({
+    id: user.id,
+    email: user.email ?? null,
+    full_name: fullName,
+    age: null,
+    password_setup: false,
+    created_at: new Date().toISOString(),
+  });
+
+  return { profile: (data ?? null) as AppUserProfile | null, error };
 }
 
 export async function updateAppUserProfile(
@@ -49,7 +82,9 @@ export async function updateAppUserProfile(
   return supabase
     .from('app_user')
     .update(updates)
-    .eq('id', userId);
+    .eq('id', userId)
+    .select('id,email,full_name,age,password_setup,created_at')
+    .maybeSingle();
 }
 
 export async function updateAuthProfile({

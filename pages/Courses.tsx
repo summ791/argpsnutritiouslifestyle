@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import type { User } from '@supabase/supabase-js';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../services/supabaseClient';
-import { getAppUserProfile, isProfileComplete, type AppUserProfile } from '../services/auth';
+import { ensureAppUserProfile, isProfileComplete, type AppUserProfile } from '../services/auth';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 type Lesson = {
@@ -1105,7 +1105,7 @@ export const Courses: React.FC = () => {
     const loadProfile = async () => {
       setProfileLoading(true);
       setProfileError('');
-      const { profile, error } = await getAppUserProfile(user.id);
+      const { profile, error } = await ensureAppUserProfile(user);
       if (!isMounted) return;
 
       if (error) {

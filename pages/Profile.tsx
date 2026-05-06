@@ -2,11 +2,11 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { User } from '@supabase/supabase-js';
 import {
-  getAppUserProfile,
   getCurrentUser,
+  ensureAppUserProfile,
   isProfileComplete,
-  updateAppUserProfile,
   updateAuthProfile,
+  upsertAppUserProfile,
   type AppUserProfile,
 } from '../services/auth';
 
@@ -40,17 +40,12 @@ export const Profile: React.FC = () => {
       }
 
       setUser(data.user);
-      const { profile: storedProfile, error: profileError } = await getAppUserProfile(data.user.id);
+      const { profile: storedProfile, error: profileError } = await ensureAppUserProfile(data.user);
       if (!isMounted) return;
 
       if (profileError) {
         setErrorMessage(profileError.message);
         setLoading(false);
-        return;
-      }
-
-      if (!storedProfile) {
-        navigate('/onboarding');
         return;
       }
 
@@ -74,8 +69,8 @@ export const Profile: React.FC = () => {
     event.preventDefault();
     setErrorMessage('');
     setMessage('');
-    if (!user || !profile) {
-      setErrorMessage('Unable to load your profile.');
+    if (!user) {
+      setErrorMessage('Your session expired. Please login again.');
       return;
     }
 
@@ -104,7 +99,10 @@ export const Profile: React.FC = () => {
       return;
     }
 
-    const { error: dbError } = await updateAppUserProfile(user.id, {
+    const { data: savedProfile, error: dbError } = await upsertAppUserProfile({
+      id: user.id,
+      created_at: profile?.created_at ?? new Date().toISOString(),
+      password_setup: profile?.password_setup ?? true,
       full_name: fullName.trim(),
       age: Number(age),
       email: trimmedEmail,
@@ -116,13 +114,17 @@ export const Profile: React.FC = () => {
       return;
     }
 
-    setMessage('Profile updated successfully.');
-    setProfile(previous => previous ? {
-      ...previous,
+    const nextProfile = (savedProfile ?? {
+      id: user.id,
+      created_at: profile?.created_at ?? new Date().toISOString(),
+      password_setup: profile?.password_setup ?? true,
       full_name: fullName.trim(),
       age: Number(age),
       email: trimmedEmail,
-    } : previous);
+    }) as AppUserProfile;
+
+    setMessage('Profile updated successfully.');
+    setProfile(nextProfile);
     setPassword('');
     setSaving(false);
   };
