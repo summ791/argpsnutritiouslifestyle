@@ -366,22 +366,22 @@ function CourseLoginCard({ onAuthSuccess }: { onAuthSuccess: (user: User | null)
       return;
     }
 
-    resetStatus();
     setLoadingAction('send-otp');
 
     const { error } = await supabase.auth.signInWithOtp({
-      email,
+      email: email.trim(),
       options: {
-        shouldCreateUser: true,
-      },
+        shouldCreateUser: true
+      }
     });
 
     if (error) {
-      setMessage(error.message);
+      console.error(error);
+      alert(error.message);
       setResendCooldown(0);
     } else {
       setShowOtp(true);
-      setMessage('OTP sent successfully');
+      alert('OTP sent successfully');
       setResendCooldown(60);
     }
 
@@ -389,20 +389,23 @@ function CourseLoginCard({ onAuthSuccess }: { onAuthSuccess: (user: User | null)
   };
 
   const verifyOtp = async () => {
-    resetStatus();
     setLoadingAction('verify-otp');
 
     const { data, error } = await supabase.auth.verifyOtp({
-      email,
-      token: otp,
-      type: 'email',
+      email: email.trim(),
+      token: otp.trim(),
+      type: 'signup'
     });
 
     if (error) {
-      setMessage(error.message);
+      console.error(error);
+      alert(error.message);
+      setLoadingAction(null);
+      return;
     } else {
       onAuthSuccess(data.user);
-      setMessage('Login successful');
+      alert('Login successful');
+      window.location.href = '/';
     }
 
     setLoadingAction(null);
