@@ -35,7 +35,9 @@ type Module = {
 
 type Progress = {
   completedLessons: Record<string, boolean>;
-  quizScores: Record<string, { score: number; total: number }>;
+  quizScores: Record<string, { score: number; total: number; passed?: boolean }>;
+  completedModules?: Record<string, boolean>;
+  unlockedModules?: Record<string, boolean>;
   lastVisited?: { moduleId: string; lessonId: string };
 };
 
@@ -266,12 +268,30 @@ const foodItems: FoodItem[] = [
 
 // ─── Progress Helpers ─────────────────────────────────────────────────────────
 const PROGRESS_KEY = 'fuelsense-progress-v1';
-const emptyProgress: Progress = { completedLessons: {}, quizScores: {} };
+const emptyProgress: Progress = {
+  completedLessons: {},
+  quizScores: {},
+  completedModules: {},
+  unlockedModules: { [modules[0]?.id ?? 'm1']: true },
+};
+
+function normalizeProgress(progress: Partial<Progress> | null): Progress {
+  return {
+    completedLessons: progress?.completedLessons ?? {},
+    quizScores: progress?.quizScores ?? {},
+    completedModules: progress?.completedModules ?? {},
+    unlockedModules: {
+      [modules[0]?.id ?? 'm1']: true,
+      ...(progress?.unlockedModules ?? {}),
+    },
+    lastVisited: progress?.lastVisited,
+  };
+}
 
 function readProgress(): Progress {
   try {
     const raw = localStorage.getItem(PROGRESS_KEY);
-    return raw ? { ...emptyProgress, ...JSON.parse(raw) } : emptyProgress;
+    return raw ? normalizeProgress(JSON.parse(raw) as Partial<Progress>) : normalizeProgress(null);
   } catch { return emptyProgress; }
 }
 
@@ -287,13 +307,12 @@ function moduleProgressPct(p: Progress, moduleId: string) {
 }
 
 function isModuleComplete(p: Progress, moduleId: string) {
-  return moduleProgressPct(p, moduleId) === 100;
+  return p.completedModules?.[moduleId] === true || p.quizScores[moduleId]?.passed === true;
 }
 
 function isModuleUnlocked(p: Progress, moduleId: string) {
-  const idx = modules.findIndex(m => m.id === moduleId);
-  if (idx <= 0) return true;
-  return isModuleComplete(p, modules[idx - 1].id);
+  if (moduleId === modules[0]?.id) return true;
+  return p.unlockedModules?.[moduleId] === true;
 }
 
 function overallProgressPct(p: Progress) {
