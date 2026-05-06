@@ -1094,6 +1094,7 @@ function OverviewView({
 export const Courses: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [appUserProfile, setAppUserProfile] = useState<AppUserProfile | null | undefined>(undefined);
+  const resolvedAppUserProfile = appUserProfile ?? null;
   const [authLoading, setAuthLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileError, setProfileError] = useState('');
@@ -1415,7 +1416,7 @@ export const Courses: React.FC = () => {
       <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-primary-100 bg-primary-50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary-600">Signed in</p>
-          <p className="mt-1 text-sm font-semibold text-primary-950">{getUserDisplayName(user, appUserProfile)}</p>
+          <p className="mt-1 text-sm font-semibold text-primary-950">{getUserDisplayName(user, resolvedAppUserProfile)}</p>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <button
@@ -1423,7 +1424,7 @@ export const Courses: React.FC = () => {
             onClick={() => navigate('/profile')}
             className="rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm font-bold text-primary-700 transition-colors hover:bg-primary-100"
           >
-            {isProfileComplete(appUserProfile) ? 'My Profile' : 'Complete Profile'}
+            {isProfileComplete(resolvedAppUserProfile) ? 'My Profile' : 'Complete Profile'}
           </button>
           <button
             type="button"
