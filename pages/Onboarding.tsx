@@ -53,11 +53,13 @@ export const Onboarding: React.FC = () => {
         return;
       }
 
-      if (storedProfile?.full_name) {
-        setFullName(storedProfile.full_name);
-      }
-      if (typeof storedProfile?.age === 'number') {
-        setAge(String(storedProfile.age));
+      if (storedProfile) {
+        if (storedProfile.full_name) {
+          setFullName(storedProfile.full_name);
+        }
+        if (typeof storedProfile.age === 'number') {
+          setAge(String(storedProfile.age));
+        }
       }
       setLoading(false);
     };

@@ -18,6 +18,12 @@ export type AppUserProfileInput = {
   created_at?: string | null;
 };
 
+export type CompleteAppUserProfile = AppUserProfile & {
+  full_name: string;
+  age: number;
+  password_setup: true;
+};
+
 export async function getCurrentUser() {
   return supabase.auth.getUser();
 }
@@ -74,7 +80,7 @@ export async function updateAuthProfile({
   return supabase.auth.updateUser(payload);
 }
 
-export function isProfileComplete(profile: AppUserProfile | null | undefined): profile is AppUserProfile {
+export function isProfileComplete(profile: AppUserProfile | null | undefined): profile is CompleteAppUserProfile {
   return (
     !!profile &&
     typeof profile.full_name === 'string' &&
