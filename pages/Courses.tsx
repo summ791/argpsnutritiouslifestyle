@@ -324,6 +324,7 @@ function CourseLoginCard({ onAuthSuccess }: { onAuthSuccess: (user: User | null)
   const [showOtp, setShowOtp] = useState(false);
   const [loadingAction, setLoadingAction] = useState<'google' | 'send-otp' | 'verify-otp' | null>(null);
   const [message, setMessage] = useState('');
+  const [resendCooldown, setResendCooldown] = useState(0);
 
   const resetStatus = () => {
     setMessage('');
@@ -346,7 +347,25 @@ function CourseLoginCard({ onAuthSuccess }: { onAuthSuccess: (user: User | null)
     }
   };
 
+  useEffect(() => {
+    if (resendCooldown <= 0) {
+      return undefined;
+    }
+
+    const timer = window.setInterval(() => {
+      setResendCooldown(prev => (prev <= 1 ? 0 : prev - 1));
+    }, 1000);
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, [resendCooldown]);
+
   const sendOtp = async () => {
+    if (loadingAction === 'send-otp' || resendCooldown > 0) {
+      return;
+    }
+
     resetStatus();
     setLoadingAction('send-otp');
 
@@ -359,9 +378,11 @@ function CourseLoginCard({ onAuthSuccess }: { onAuthSuccess: (user: User | null)
 
     if (error) {
       setMessage(error.message);
+      setResendCooldown(0);
     } else {
       setShowOtp(true);
       setMessage('OTP sent successfully');
+      setResendCooldown(60);
     }
 
     setLoadingAction(null);
@@ -432,10 +453,16 @@ function CourseLoginCard({ onAuthSuccess }: { onAuthSuccess: (user: User | null)
         />
         <button
           type="submit"
-          disabled={isLoading || !email}
+          disabled={isLoading || !email || resendCooldown > 0}
           className="w-full rounded-lg bg-primary-600 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {loadingAction === 'send-otp' ? 'Sending OTP...' : 'Send OTP'}
+          {loadingAction === 'send-otp'
+            ? 'Sending OTP...'
+            : resendCooldown > 0
+            ? `Resend OTP in ${resendCooldown}s`
+            : showOtp
+            ? 'Resend OTP'
+            : 'Send OTP'}
         </button>
       </form>
 
