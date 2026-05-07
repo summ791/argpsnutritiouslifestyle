@@ -492,9 +492,11 @@ function CourseLoginCard({ onAuthSuccess }: { onAuthSuccess: (user: User | null)
 
     if (error) {
       setErrorMessage(error.message);
+    } else if (mode === 'signup' && !data.session) {
+      setMessage('Account created successfully. Please check your email to confirm your signup.');
     } else {
       setMessage(mode === 'signup' ? 'Account created successfully.' : 'Login successful.');
-      onAuthSuccess(data.user);
+      onAuthSuccess(data.session?.user ?? data.user);
       navigate('/courses', { replace: true });
     }
 

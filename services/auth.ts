@@ -39,15 +39,43 @@ export async function getAppUserProfile(userId: string) {
 }
 
 export async function upsertAppUserProfile(profile: AppUserProfileInput) {
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  const user = sessionData.session?.user;
+
+  if (sessionError) {
+    return { data: null, error: sessionError };
+  }
+
+  if (!user) {
+    return { data: null, error: new Error('No authenticated Supabase user session found.') };
+  }
+
+  const profileForAuthenticatedUser = {
+    ...profile,
+    id: user.id,
+    email: profile.email ?? user.email ?? null,
+  };
+
   return supabase
     .from('app_user')
-    .upsert(profile, { onConflict: 'id' })
+    .upsert(profileForAuthenticatedUser, { onConflict: 'id' })
     .select('id,email,full_name,age,password_setup,created_at')
     .maybeSingle();
 }
 
 export async function ensureAppUserProfile(user: User) {
-  const existing = await getAppUserProfile(user.id);
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  const authenticatedUser = sessionData.session?.user;
+
+  if (sessionError) {
+    return { profile: null, error: sessionError };
+  }
+
+  if (!authenticatedUser || authenticatedUser.id !== user.id) {
+    return { profile: null, error: new Error('No authenticated Supabase user session found.') };
+  }
+
+  const existing = await getAppUserProfile(authenticatedUser.id);
 
   if (existing.error) {
     return existing;
@@ -57,14 +85,14 @@ export async function ensureAppUserProfile(user: User) {
     return existing;
   }
 
-  const metadataName = user.user_metadata?.full_name;
+  const metadataName = authenticatedUser.user_metadata?.full_name;
   const fullName = typeof metadataName === 'string' && metadataName.trim().length > 0
     ? metadataName.trim()
     : null;
 
   const { data, error } = await upsertAppUserProfile({
-    id: user.id,
-    email: user.email ?? null,
+    id: authenticatedUser.id,
+    email: authenticatedUser.email ?? null,
     full_name: fullName,
     age: null,
     password_setup: false,
