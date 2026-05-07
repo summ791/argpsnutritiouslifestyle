@@ -22,7 +22,6 @@ export type AppUserProfileInput = {
 export type CompleteAppUserProfile = AppUserProfile & {
   full_name: string;
   age: number;
-  password_setup: true;
 };
 
 export async function getCurrentUser() {
@@ -121,7 +120,6 @@ export function isProfileComplete(profile: AppUserProfile | null | undefined): p
     typeof profile.full_name === 'string' &&
     profile.full_name.trim().length > 0 &&
     typeof profile.age === 'number' &&
-    profile.age > 0 &&
-    profile.password_setup === true
+    profile.age > 0
   );
 }

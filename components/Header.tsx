@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { NavLink as RouterNavLink, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X } from 'lucide-react';
 import { NavLink } from '../types';
 
 const navLinks: NavLink[] = [
@@ -12,11 +11,8 @@ const navLinks: NavLink[] = [
 ];
 
 export const Header: React.FC = () => {
-  const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-
-  const toggleMenu = () => setIsOpen(!isOpen);
 
   const isActive = (path: string) => {
     if (path === '/' && location.pathname !== '/') return false;
@@ -40,9 +36,8 @@ export const Header: React.FC = () => {
              </div>
           </div>
 
-          {/* Desktop Nav - Classic Horizontal Menu */}
-          <div className="hidden md:flex items-center space-x-4 lg:space-x-8">
-            <nav className="flex space-x-4 lg:space-x-10">
+          <div className="flex min-w-0 items-center gap-3 lg:gap-8">
+            <nav className="hidden items-center space-x-4 lg:flex lg:space-x-10">
               {navLinks.map((link) => (
                 <RouterNavLink
                   key={link.name}
@@ -57,7 +52,7 @@ export const Header: React.FC = () => {
                 </RouterNavLink>
               ))}
             </nav>
-            <div className="pl-4 lg:pl-8 border-l border-gray-200">
+            <div className="hidden border-l border-gray-200 pl-4 lg:block lg:pl-8">
                 <button 
                   onClick={() => navigate('/contact')}
                   className="bg-primary-700 text-white px-4 lg:px-6 py-2 md:py-2.5 rounded-lg font-medium hover:bg-primary-800 transition-colors shadow-sm text-xs md:text-sm tracking-wide transform hover:-translate-y-0.5 duration-200 whitespace-nowrap"
@@ -67,51 +62,14 @@ export const Header: React.FC = () => {
             </div>
           </div>
 
-          {/* Mobile Menu Button */}
-          <div className="md:hidden flex items-center">
             <button
-              onClick={toggleMenu}
-              className="text-gray-500 hover:text-primary-600 focus:outline-none p-2 rounded-md hover:bg-gray-50 transition-colors"
-              aria-label={isOpen ? "Close menu" : "Open menu"}
+              onClick={() => navigate('/courses')}
+              className="rounded-full bg-primary-700 px-4 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-primary-800"
             >
-              {isOpen ? <X size={24} /> : <Menu size={24} />}
+              Courses
             </button>
           </div>
-        </div>
       </div>
-
-      {/* Mobile Nav */}
-      {isOpen && (
-        <div className="md:hidden bg-white border-b border-gray-100 absolute w-full shadow-lg z-50 animate-in slide-in-from-top-2 duration-200">
-          <div className="px-4 pt-4 pb-6 space-y-2">
-            {navLinks.map((link) => (
-              <RouterNavLink
-                key={link.name}
-                to={link.path}
-                onClick={() => setIsOpen(false)}
-                className={`block px-4 py-3 rounded-md text-base font-medium transition-colors ${
-                  isActive(link.path)
-                    ? 'text-primary-800 bg-primary-50'
-                    : 'text-gray-600 hover:text-primary-600 hover:bg-gray-50'
-                }`}
-              >
-                {link.name}
-              </RouterNavLink>
-            ))}
-            <div className="pt-4 mt-2 border-t border-gray-100">
-                <button 
-                onClick={() => {
-                    navigate('/contact');
-                    setIsOpen(false);
-                }}
-                className="w-full bg-primary-700 text-white px-4 py-3.5 rounded-md font-medium hover:bg-primary-800 transition-colors shadow-sm text-center"
-                >
-                Get Started
-                </button>
-            </div>
-          </div>
-        </div>
-      )}
     </header>
   );
 };

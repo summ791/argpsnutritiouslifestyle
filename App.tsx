@@ -6,7 +6,6 @@ import { Home } from './pages/Home';
 import { About } from './pages/About';
 import { Courses } from './pages/Courses';
 import { Onboarding } from './pages/Onboarding';
-import { Profile } from './pages/Profile';
 import { Services } from './pages/Services';
 import { Contact } from './pages/Contact';
 import { ScrollToTop } from './components/ScrollToTop';
@@ -67,7 +66,6 @@ function App() {
             <Route path="/about" element={<About />} />
             <Route path="/courses" element={<Courses />} />
             <Route path="/onboarding" element={<Onboarding />} />
-            <Route path="/profile" element={<Profile />} />
             <Route path="/services" element={<Services />} />
             <Route path="/contact" element={<Contact />} />
           </Routes>

@@ -16,15 +16,14 @@ export const Onboarding: React.FC = () => {
   const [profile, setProfile] = useState<AppUserProfile | null>(null);
   const [fullName, setFullName] = useState('');
   const [age, setAge] = useState('');
-  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
   const canSubmit = useMemo(() => {
-    return fullName.trim().length > 0 && Number(age) > 0 && password.length >= 6;
-  }, [fullName, age, password]);
+    return fullName.trim().length > 0 && Number(age) > 0;
+  }, [fullName, age]);
 
   useEffect(() => {
     let isMounted = true;
@@ -78,7 +77,7 @@ export const Onboarding: React.FC = () => {
     }
 
     if (!canSubmit) {
-      setErrorMessage('Please enter name, age, and a password with at least 6 characters.');
+      setErrorMessage('Please enter your full name and age.');
       return;
     }
 
@@ -86,7 +85,6 @@ export const Onboarding: React.FC = () => {
 
     const { error: authError } = await updateAuthProfile({
       fullName: fullName.trim(),
-      password,
     });
     if (authError) {
       setErrorMessage(authError.message);
@@ -100,7 +98,7 @@ export const Onboarding: React.FC = () => {
       email: user.email ?? null,
       full_name: fullName.trim(),
       age: Number(age),
-      password_setup: true,
+      password_setup: profile?.password_setup ?? true,
       created_at: profile?.created_at ?? now,
     };
 
@@ -132,7 +130,7 @@ export const Onboarding: React.FC = () => {
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary-600">Welcome to ARGPS</p>
           <h1 className="mt-3 text-3xl font-semibold text-primary-900">Complete your profile</h1>
           <p className="mt-3 text-sm leading-6 text-gray-600">
-            Finish onboarding to access courses, save progress, and use email + password login.
+            Finish onboarding to access courses and save your learning progress.
           </p>
         </div>
 
@@ -168,22 +166,6 @@ export const Onboarding: React.FC = () => {
             />
           </div>
 
-          <div>
-            <label htmlFor="password" className="block text-sm font-semibold text-gray-700 mb-2">
-              Create Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={event => setPassword(event.target.value)}
-              required
-              placeholder="Create a secure password"
-              className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none transition-colors focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-            />
-            <p className="mt-2 text-xs text-gray-500">Use at least 6 characters. This password is managed securely by Supabase.</p>
-          </div>
-
           {errorMessage && (
             <div className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{errorMessage}</div>
           )}
@@ -204,7 +186,7 @@ export const Onboarding: React.FC = () => {
               onClick={() => navigate('/courses')}
               className="w-full rounded-xl border border-gray-200 bg-white px-5 py-3 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 sm:w-auto"
             >
-              Back to Login
+              Back to Courses
             </button>
           </div>
         </form>

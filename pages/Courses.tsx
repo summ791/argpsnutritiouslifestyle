@@ -1,8 +1,24 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import type { User } from '@supabase/supabase-js';
 import { useLocation, useNavigate } from 'react-router-dom';
+import {
+  BookOpen,
+  Check,
+  CircleUserRound,
+  Home,
+  Lock,
+  Sparkles,
+  Trophy,
+  Utensils,
+} from 'lucide-react';
 import { supabase } from '../services/supabaseClient';
-import { ensureAppUserProfile, isProfileComplete, type AppUserProfile } from '../services/auth';
+import {
+  ensureAppUserProfile,
+  isProfileComplete,
+  updateAuthProfile,
+  upsertAppUserProfile,
+  type AppUserProfile,
+} from '../services/auth';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 type Lesson = {
@@ -57,6 +73,8 @@ type UserActivity = {
   course_name: string;
   progress?: string | null;
 };
+
+const LOGO_URL = 'https://raw.githubusercontent.com/summ791/argpsapp2/main/logo.jpg';
 
 // ─── Course Data ─────────────────────────────────────────────────────────────
 const modules: Module[] = [
@@ -264,12 +282,36 @@ const foodItems: FoodItem[] = [
   { name: 'Buttermilk', emoji: '🥛', category: 'Dairy', serving: '1 glass', calories: 40, protein: 3, carbs: 5, fat: 1 },
   { name: 'Milk (toned)', emoji: '🥛', category: 'Dairy', serving: '1 glass', calories: 120, protein: 6, carbs: 12, fat: 5 },
   { name: 'Paneer', emoji: '🧀', category: 'Dairy', serving: '50 g', calories: 130, protein: 9, carbs: 2, fat: 10 },
+  { name: 'Mutton Biryani', emoji: 'MB', category: 'Biryani', serving: '1 cup', calories: 480, protein: 22, carbs: 48, fat: 22 },
+  { name: 'Fish Biryani', emoji: 'FB', category: 'Biryani', serving: '1 cup', calories: 430, protein: 21, carbs: 46, fat: 16 },
+  { name: 'Prawn Biryani', emoji: 'PB', category: 'Biryani', serving: '1 cup', calories: 420, protein: 24, carbs: 45, fat: 15 },
+  { name: 'Mushroom Biryani', emoji: 'VB', category: 'Biryani', serving: '1 cup', calories: 340, protein: 8, carbs: 48, fat: 11 },
+  { name: 'Egg Biryani', emoji: 'EB', category: 'Biryani', serving: '1 cup', calories: 390, protein: 15, carbs: 46, fat: 15 },
+  { name: 'Chicken 65', emoji: 'CS', category: 'Starters', serving: '100 g', calories: 290, protein: 23, carbs: 8, fat: 18 },
+  { name: 'Pepper Chicken', emoji: 'CS', category: 'Starters', serving: '100 g', calories: 230, protein: 25, carbs: 5, fat: 12 },
+  { name: 'Mutton Chukka', emoji: 'MS', category: 'Starters', serving: '100 g', calories: 310, protein: 24, carbs: 4, fat: 22 },
+  { name: 'Mutton Pepper Fry', emoji: 'MS', category: 'Starters', serving: '100 g', calories: 285, protein: 25, carbs: 5, fat: 18 },
+  { name: 'Fish Fry', emoji: 'FS', category: 'Starters', serving: '1 piece (~100 g)', calories: 240, protein: 22, carbs: 6, fat: 14 },
+  { name: 'Nethili Fry', emoji: 'FS', category: 'Starters', serving: '100 g', calories: 260, protein: 24, carbs: 7, fat: 15 },
+  { name: 'Prawn Varuval', emoji: 'PS', category: 'Starters', serving: '100 g', calories: 220, protein: 25, carbs: 6, fat: 10 },
+  { name: 'Kambu Koozh', emoji: 'TN', category: 'Traditional', serving: '1 bowl', calories: 180, protein: 5, carbs: 36, fat: 2 },
+  { name: 'Ragi Kali', emoji: 'TN', category: 'Traditional', serving: '1 ball', calories: 170, protein: 4, carbs: 35, fat: 1.5 },
+  { name: 'Kothu Parotta', emoji: 'TN', category: 'Traditional', serving: '1 plate', calories: 520, protein: 14, carbs: 68, fat: 20 },
+  { name: 'Lemon Rice', emoji: 'RV', category: 'Rice Varieties', serving: '1 cup', calories: 280, protein: 5, carbs: 42, fat: 10 },
+  { name: 'Tomato Rice', emoji: 'RV', category: 'Rice Varieties', serving: '1 cup', calories: 260, protein: 5, carbs: 44, fat: 7 },
+  { name: 'Curd Rice', emoji: 'RV', category: 'Rice Varieties', serving: '1 cup', calories: 240, protein: 7, carbs: 38, fat: 6 },
+  { name: 'Tamarind Rice', emoji: 'RV', category: 'Rice Varieties', serving: '1 cup', calories: 300, protein: 6, carbs: 48, fat: 9 },
+  { name: 'Millet Dosa', emoji: 'HF', category: 'Healthy Foods', serving: '1 medium', calories: 120, protein: 4, carbs: 22, fat: 2 },
+  { name: 'Sprouts Sundal', emoji: 'HF', category: 'Healthy Foods', serving: '1/2 cup', calories: 110, protein: 8, carbs: 16, fat: 2 },
+  { name: 'Vegetable Kurma', emoji: 'CY', category: 'Curries & Dals', serving: '1 cup', calories: 180, protein: 5, carbs: 18, fat: 10 },
+  { name: 'Chettinad Chicken Curry', emoji: 'NV', category: 'Non-Veg', serving: '100 g', calories: 250, protein: 23, carbs: 6, fat: 15 },
+  { name: 'Mutton Curry', emoji: 'NV', category: 'Non-Veg', serving: '100 g', calories: 280, protein: 22, carbs: 5, fat: 19 },
   { name: 'Filter Coffee', emoji: '☕', category: 'Beverages', serving: '1 cup with sugar', calories: 80, protein: 3, carbs: 10, fat: 3 },
   { name: 'Tender Coconut Water', emoji: '🥥', category: 'Beverages', serving: '1 glass', calories: 45, protein: 1.5, carbs: 9, fat: 0.5 },
 ];
 
 // ─── Progress Helpers ─────────────────────────────────────────────────────────
-const PROGRESS_KEY = 'fuelsense-progress-v1';
+const PROGRESS_KEY = 'argps-progress-v1';
 const COURSE_PROGRESS_ROW = 'ARGPS_SEQUENTIAL_PROGRESS';
 const emptyProgress: Progress = {
   completedLessons: {},
@@ -300,6 +342,7 @@ function readProgress(): Progress {
 
 function writeProgress(p: Progress) {
   localStorage.setItem(PROGRESS_KEY, JSON.stringify(p));
+  window.dispatchEvent(new Event('argps:progress'));
 }
 
 async function saveProgressToSupabase(userId: string, progress: Progress) {
@@ -388,8 +431,21 @@ function ProgressBar({ value }: { value: number }) {
 }
 
 // ─── Views ────────────────────────────────────────────────────────────────────
+function BrandLockup({ compact = false }: { compact?: boolean }) {
+  return (
+    <div className="flex items-center gap-3">
+      <img src={LOGO_URL} alt="ARGPS Nutritious Lifestyle logo" className={`${compact ? 'h-10' : 'h-14'} w-auto object-contain`} />
+      <div>
+        <div className={`${compact ? 'text-base' : 'text-xl'} font-serif font-bold leading-tight text-primary-950`}>ARGPS Nutritious Lifestyle</div>
+        <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-primary-600">Tamil Nadu Nutrition</div>
+      </div>
+    </div>
+  );
+}
+
 function CourseLoginCard({ onAuthSuccess }: { onAuthSuccess: (user: User | null) => void }) {
   const navigate = useNavigate();
+  const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [otp, setOtp] = useState('');
@@ -421,20 +477,23 @@ function CourseLoginCard({ onAuthSuccess }: { onAuthSuccess: (user: User | null)
     }
   };
 
-  const signInWithPassword = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handlePasswordAuth = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     resetStatus();
     setLoadingAction('password');
 
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: email.trim(),
-      password,
-    });
+    const credentials = { email: email.trim(), password };
+    const { data, error } = mode === 'signup'
+      ? await supabase.auth.signUp({
+        ...credentials,
+        options: { emailRedirectTo: window.location.origin + '/courses' },
+      })
+      : await supabase.auth.signInWithPassword(credentials);
 
     if (error) {
       setErrorMessage(error.message);
     } else {
-      setMessage('Login successful.');
+      setMessage(mode === 'signup' ? 'Account created successfully.' : 'Login successful.');
       onAuthSuccess(data.user);
       navigate('/courses', { replace: true });
     }
@@ -467,7 +526,7 @@ function CourseLoginCard({ onAuthSuccess }: { onAuthSuccess: (user: User | null)
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim(),
       options: {
-        shouldCreateUser: true
+        shouldCreateUser: mode === 'signup'
       }
     });
 
@@ -499,7 +558,7 @@ function CourseLoginCard({ onAuthSuccess }: { onAuthSuccess: (user: User | null)
       return;
     } else {
       onAuthSuccess(data.user);
-      setMessage('Login successful.');
+      setMessage(mode === 'signup' ? 'Signup successful.' : 'Login successful.');
       navigate('/courses', { replace: true });
     }
 
@@ -509,28 +568,41 @@ function CourseLoginCard({ onAuthSuccess }: { onAuthSuccess: (user: User | null)
   const isLoading = loadingAction !== null;
 
   return (
-    <div className="mx-auto max-w-md rounded-2xl border border-primary-100 bg-white p-6 shadow-xl md:p-8">
-      <div className="mb-6 text-center">
-        <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary-600">Courses</p>
-        <h1 className="mt-2 font-serif text-2xl font-bold text-primary-900">Login to access courses</h1>
-        <p className="mt-2 text-sm leading-6 text-gray-500">
-          Log in to access ARGPS Nutritious Lifestyle courses and save your learning activity.
-        </p>
+    <div className="mx-auto max-w-md rounded-[28px] border border-primary-100 bg-white/95 p-6 shadow-[0_24px_80px_rgba(19,78,74,0.12)] md:p-8">
+      <div className="mb-6 flex justify-center">
+        <BrandLockup />
       </div>
+      <div className="mb-6 grid grid-cols-2 rounded-full bg-primary-50 p-1">
+        {(['login', 'signup'] as const).map(tab => (
+          <button
+            key={tab}
+            type="button"
+            onClick={() => { setMode(tab); setShowOtp(false); resetStatus(); }}
+            className={`rounded-full px-4 py-2 text-sm font-bold transition-all ${mode === tab ? 'bg-white text-primary-800 shadow-sm' : 'text-primary-500 hover:text-primary-800'}`}
+          >
+            {tab === 'login' ? 'Login' : 'Sign Up'}
+          </button>
+        ))}
+      </div>
+
+      <h1 className="font-serif text-3xl font-bold text-primary-950">{mode === 'login' ? 'Welcome back' : 'Create your account'}</h1>
+      <p className="mb-6 mt-2 text-sm leading-6 text-gray-500">
+        {mode === 'login' ? 'Access your courses and continue learning.' : 'Start your Tamil Nadu nutrition learning journey.'}
+      </p>
 
       <button
         type="button"
         onClick={signInWithGoogle}
         disabled={isLoading}
-        className="mb-5 flex w-full items-center justify-center gap-3 rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm font-bold text-gray-700 shadow-sm transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+        className="mb-5 flex w-full items-center justify-center gap-3 rounded-full border border-primary-100 bg-white px-4 py-3 text-sm font-bold text-gray-700 shadow-sm transition-colors hover:bg-primary-50 disabled:cursor-not-allowed disabled:opacity-60"
       >
         <span className="flex h-5 w-5 items-center justify-center rounded-full border border-gray-200 text-xs font-black text-blue-600">
           G
         </span>
-        {loadingAction === 'google' ? 'Connecting...' : 'Sign in with Google'}
+        {loadingAction === 'google' ? 'Connecting...' : mode === 'login' ? 'Google Login' : 'Google Sign Up'}
       </button>
 
-      <form onSubmit={signInWithPassword} className="space-y-3">
+      <form onSubmit={handlePasswordAuth} className="space-y-3">
         <label htmlFor="course-email" className="block text-sm font-semibold text-gray-700">
           Email
         </label>
@@ -541,7 +613,7 @@ function CourseLoginCard({ onAuthSuccess }: { onAuthSuccess: (user: User | null)
           onChange={event => setEmail(event.target.value)}
           required
           placeholder="you@example.com"
-          className="w-full rounded-lg border border-gray-200 px-4 py-3 text-sm outline-none transition-colors focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+          className="w-full rounded-2xl border border-primary-100 bg-primary-50/30 px-4 py-3 text-sm outline-none transition-colors focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
         />
         <label htmlFor="course-password" className="block text-sm font-semibold text-gray-700">
           Password
@@ -551,21 +623,21 @@ function CourseLoginCard({ onAuthSuccess }: { onAuthSuccess: (user: User | null)
           type="password"
           value={password}
           onChange={event => setPassword(event.target.value)}
-          placeholder="Use the password you created"
-          className="w-full rounded-lg border border-gray-200 px-4 py-3 text-sm outline-none transition-colors focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+          placeholder={mode === 'login' ? 'Your password' : 'Create a secure password'}
+          className="w-full rounded-2xl border border-primary-100 bg-primary-50/30 px-4 py-3 text-sm outline-none transition-colors focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
         />
         <button
           type="submit"
           disabled={isLoading || !email || !password}
-          className="w-full rounded-lg bg-primary-600 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60"
+          className="w-full rounded-full bg-primary-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-primary-600/20 transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {loadingAction === 'password' ? 'Signing in...' : 'Login with Password'}
+          {loadingAction === 'password' ? 'Please wait...' : mode === 'login' ? 'Login' : 'Sign Up'}
         </button>
       </form>
 
       <div className="my-5 flex items-center gap-3">
         <div className="h-px flex-1 bg-gray-100" />
-        <span className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">or use OTP</span>
+        <span className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">{mode === 'login' ? 'Login with OTP' : 'OTP Sign Up'}</span>
         <div className="h-px flex-1 bg-gray-100" />
       </div>
 
@@ -574,7 +646,7 @@ function CourseLoginCard({ onAuthSuccess }: { onAuthSuccess: (user: User | null)
           type="button"
           onClick={sendOtp}
           disabled={isLoading || !email || resendCooldown > 0}
-          className="w-full rounded-lg bg-primary-600 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60"
+          className="w-full rounded-full border border-primary-200 bg-white px-4 py-3 text-sm font-bold text-primary-700 transition-colors hover:bg-primary-50 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {loadingAction === 'send-otp'
             ? 'Sending OTP...'
@@ -582,7 +654,7 @@ function CourseLoginCard({ onAuthSuccess }: { onAuthSuccess: (user: User | null)
             ? `Resend OTP in ${resendCooldown}s`
             : showOtp
             ? 'Resend OTP'
-            : 'Send OTP'}
+            : mode === 'login' ? 'Login with OTP' : 'Sign Up with OTP'}
         </button>
       </form>
 
@@ -605,20 +677,20 @@ function CourseLoginCard({ onAuthSuccess }: { onAuthSuccess: (user: User | null)
             onChange={event => setOtp(event.target.value)}
             required
             placeholder="Enter OTP"
-            className="w-full rounded-lg border border-gray-200 px-4 py-3 text-sm outline-none transition-colors focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+            className="w-full rounded-2xl border border-primary-100 bg-primary-50/30 px-4 py-3 text-sm outline-none transition-colors focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
           />
           <button
             type="submit"
             disabled={isLoading || !otp}
-            className="w-full rounded-lg border border-primary-200 px-4 py-3 text-sm font-bold text-primary-700 transition-colors hover:bg-primary-50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="w-full rounded-full border border-primary-200 px-4 py-3 text-sm font-bold text-primary-700 transition-colors hover:bg-primary-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loadingAction === 'verify-otp' ? 'Verifying...' : 'Verify OTP'}
           </button>
         </form>
       )}
 
-      {errorMessage && <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-700">{errorMessage}</p>}
-      {message && <p className="mt-4 rounded-lg bg-green-50 px-3 py-2 text-sm font-medium text-green-700">{message}</p>}
+      {errorMessage && <p className="mt-4 rounded-2xl bg-red-50 px-3 py-2 text-sm font-medium text-red-700">{errorMessage}</p>}
+      {message && <p className="mt-4 rounded-2xl bg-green-50 px-3 py-2 text-sm font-medium text-green-700">{message}</p>}
     </div>
   );
 }
@@ -627,14 +699,17 @@ type View =
   | { type: 'overview' }
   | { type: 'lesson'; moduleId: string; lessonId: string }
   | { type: 'quiz'; moduleId: string }
-  | { type: 'meal-builder' };
+  | { type: 'meal-builder' }
+  | { type: 'progress' }
+  | { type: 'about' }
+  | { type: 'profile' };
 
 // ─── Lesson View ──────────────────────────────────────────────────────────────
 function LessonView({
-  moduleId, lessonId, progress, onComplete, onBack, onNext,
+  moduleId, lessonId, progress, onComplete, onNext,
 }: {
   moduleId: string; lessonId: string; progress: Progress;
-  onComplete: () => void; onBack: () => void;
+  onComplete: () => void;
   onNext: (mid: string, lid: string) => void;
 }) {
   const mod = modules.find(m => m.id === moduleId)!;
@@ -648,10 +723,6 @@ function LessonView({
 
   return (
     <div className="max-w-2xl mx-auto">
-      <button onClick={onBack} className="flex items-center gap-1 text-sm text-primary-600 hover:text-primary-800 mb-6 font-medium">
-        ← Back to modules
-      </button>
-
       <div className="bg-primary-50 rounded-2xl px-5 py-3 mb-6 text-sm font-medium text-primary-700">
         {mod.icon} Module {mod.number}: {mod.title}
       </div>
@@ -660,7 +731,7 @@ function LessonView({
       <p className="text-gray-600 leading-relaxed mb-8">{lesson.intro}</p>
 
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-6">
-        <h2 className="font-semibold text-gray-900 mb-4 text-lg">Key Points</h2>
+        <h2 className="font-serif text-2xl font-bold text-primary-950 mb-4">Key ideas</h2>
         <ul className="space-y-3">
           {lesson.points.map((pt, i) => (
             <li key={i} className="flex gap-3 text-gray-700">
@@ -672,7 +743,7 @@ function LessonView({
       </div>
 
       <div className="bg-amber-50 rounded-2xl border border-amber-100 p-6 mb-6">
-        <h2 className="font-semibold text-amber-900 mb-4 text-lg">🍛 Real Tamil Nadu Examples</h2>
+        <h2 className="font-serif text-2xl font-bold text-amber-900 mb-4">Real-life examples</h2>
         <ul className="space-y-2">
           {lesson.examples.map((ex, i) => (
             <li key={i} className="text-amber-800 text-sm">{ex}</li>
@@ -690,7 +761,7 @@ function LessonView({
           onClick={onComplete}
           className="w-full bg-primary-600 text-white py-4 rounded-xl font-semibold hover:bg-primary-700 transition-colors mb-3"
         >
-          ✓ Mark as Complete
+          Mark complete & continue
         </button>
       )}
       {isCompleted && nextLesson && (
@@ -698,7 +769,7 @@ function LessonView({
           onClick={() => onNext(moduleId, nextLesson.id)}
           className="w-full bg-primary-600 text-white py-4 rounded-xl font-semibold hover:bg-primary-700 transition-colors mb-3"
         >
-          Next Lesson →
+          Mark complete & continue
         </button>
       )}
       {isCompleted && !nextLesson && (
@@ -715,19 +786,23 @@ function LessonView({
 
 // ─── Quiz View ────────────────────────────────────────────────────────────────
 function QuizView({
-  moduleId, progress, onSave, onBack, onContinue,
+  moduleId, onSave, onBack, onContinue,
 }: {
-  moduleId: string; progress: Progress;
+  moduleId: string;
   onSave: (score: number, total: number) => void; onBack: () => void; onContinue: () => void;
 }) {
   const mod = modules.find(m => m.id === moduleId)!;
   const [answers, setAnswers] = useState<Record<string, number>>({});
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [submitted, setSubmitted] = useState(false);
   const [savedScore, setSavedScore] = useState(0);
 
   const passScore = Math.ceil(mod.quiz.length * 0.7);
   const score = submitted ? savedScore : 0;
   const passed = score >= passScore;
+  const currentQuestion = mod.quiz[currentIndex];
+  const selectedAnswer = answers[currentQuestion.id];
+  const questionProgress = Math.round(((currentIndex + 1) / mod.quiz.length) * 100);
 
   function submit() {
     const nextScore = mod.quiz.filter(q => answers[q.id] === q.answer).length;
@@ -738,21 +813,34 @@ function QuizView({
 
   function retry() {
     setAnswers({});
+    setCurrentIndex(0);
     setSavedScore(0);
     setSubmitted(false);
   }
 
+  function nextQuestion() {
+    if (currentIndex < mod.quiz.length - 1) {
+      setCurrentIndex(currentIndex + 1);
+      return;
+    }
+    submit();
+  }
+
   return (
     <div className="max-w-2xl mx-auto">
-      <button onClick={onBack} className="flex items-center gap-1 text-sm text-primary-600 hover:text-primary-800 mb-6 font-medium">
-        ← Back to modules
-      </button>
+      <button onClick={onBack} className="hidden" aria-hidden="true" tabIndex={-1} />
 
       <div className="bg-primary-50 rounded-2xl px-5 py-3 mb-6">
         <h1 className="font-serif text-2xl font-bold text-gray-900">
           {mod.icon} Module {mod.number} Quiz
         </h1>
-        <p className="text-gray-600 text-sm mt-1">{mod.quiz.length} questions</p>
+        <div className="mt-4">
+          <div className="mb-2 flex justify-between text-xs font-semibold text-gray-500">
+            <span>Question {currentIndex + 1} of {mod.quiz.length}</span>
+            <span>{questionProgress}%</span>
+          </div>
+          <ProgressBar value={questionProgress} />
+        </div>
       </div>
 
       {submitted && (
@@ -766,14 +854,14 @@ function QuizView({
       )}
 
       <div className="space-y-6">
-        {mod.quiz.map((q, qi) => {
+        {[currentQuestion].map((q) => {
           const selected = answers[q.id];
           const isCorrect = selected === q.answer;
           return (
             <div key={q.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
               <div className="flex gap-3 mb-4">
                 <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-100 text-primary-700 text-sm font-bold">
-                  {qi + 1}
+                  {currentIndex + 1}
                 </span>
                 <p className="font-medium text-gray-900">{q.question}</p>
               </div>
@@ -809,11 +897,11 @@ function QuizView({
 
       {!submitted && (
         <button
-          onClick={submit}
-          disabled={Object.keys(answers).length < mod.quiz.length}
+          onClick={nextQuestion}
+          disabled={selectedAnswer === undefined}
           className="w-full mt-8 bg-primary-600 text-white py-4 rounded-xl font-semibold hover:bg-primary-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
-          Submit Quiz
+          {currentIndex < mod.quiz.length - 1 ? 'Next Question' : 'Finish Quiz'}
         </button>
       )}
       {submitted && (
@@ -827,9 +915,6 @@ function QuizView({
               Retry Quiz
             </button>
           )}
-          <button onClick={onBack} className="w-full border border-primary-300 text-primary-700 py-4 rounded-xl font-semibold hover:bg-primary-50 transition-colors">
-            Back to Modules
-          </button>
         </div>
       )}
     </div>
@@ -873,9 +958,7 @@ function MealBuilderView({ onBack }: { onBack: () => void }) {
 
   return (
     <div>
-      <button onClick={onBack} className="flex items-center gap-1 text-sm text-primary-600 hover:text-primary-800 mb-6 font-medium">
-        ← Back to modules
-      </button>
+      <button onClick={onBack} className="hidden" aria-hidden="true" tabIndex={-1} />
       <h1 className="font-serif text-3xl font-bold text-gray-900 mb-2">🍽️ Meal Builder</h1>
       <p className="text-gray-500 mb-8">Build your Tamil Nadu meal and see its nutrition breakdown.</p>
 
@@ -977,7 +1060,7 @@ function OverviewView({
       <div className="rounded-3xl bg-gradient-to-br from-primary-600 to-primary-800 p-8 md:p-12 mb-10 text-white">
         <p className="text-xs uppercase tracking-widest opacity-70 mb-2">🌱 Tamil Nadu Nutrition Course</p>
         <h1 className="font-serif text-4xl md:text-5xl font-bold mb-3">
-          The Art of Human <span className="italic opacity-90">FuelSense</span>
+          ARGPS Nutritious Lifestyle
         </h1>
         <p className="text-primary-100 max-w-lg mb-8 text-lg leading-relaxed">
           Practical nutrition rooted in Tamil Nadu food. No diets, no restrictions — just understanding the food you already love.
@@ -1091,6 +1174,129 @@ function OverviewView({
 }
 
 // ─── Main Courses Page ────────────────────────────────────────────────────────
+function DashboardNav({ view, onView }: { view: View; onView: (next: View) => void }) {
+  const items = [
+    { label: 'Home', icon: Home, action: () => onView({ type: 'overview' }), active: view.type === 'overview' },
+    { label: 'Modules', icon: BookOpen, action: () => onView({ type: 'overview' }), active: view.type === 'lesson' || view.type === 'quiz' },
+    { label: 'Meal Builder', icon: Utensils, action: () => onView({ type: 'meal-builder' }), active: view.type === 'meal-builder' },
+    { label: 'Progress', icon: Trophy, action: () => onView({ type: 'progress' }), active: view.type === 'progress' },
+    { label: 'About', icon: Sparkles, action: () => onView({ type: 'about' }), active: view.type === 'about' },
+    { label: 'Profile', icon: CircleUserRound, action: () => onView({ type: 'profile' }), active: view.type === 'profile' },
+  ];
+  return (
+    <div className="mb-8 rounded-[28px] border border-primary-100 bg-white/90 p-3 shadow-sm">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <BrandLockup compact />
+        <nav className="flex gap-2 overflow-x-auto pb-1 lg:pb-0">
+          {items.map(item => {
+            const Icon = item.icon;
+            return (
+              <button key={item.label} type="button" onClick={item.action} className={`inline-flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-sm font-bold transition-all ${item.active ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/20' : 'text-gray-600 hover:bg-primary-50 hover:text-primary-700'}`}>
+                <Icon size={16} />{item.label}
+              </button>
+            );
+          })}
+        </nav>
+      </div>
+    </div>
+  );
+}
+
+function ProgressView({ progress }: { progress: Progress }) {
+  const overall = overallProgressPct(progress);
+  const levels = ['Beginner Nutrition Explorer', 'Healthy Meal Learner', 'Smart Nutrition Builder', 'Food Master', 'Nutrition Champion'];
+  const activeLevel = Math.min(levels.length - 1, Math.floor(overall / 25));
+  const completed = modules.filter(module => isModuleComplete(progress, module.id)).length;
+  const unlocked = modules.filter(module => isModuleUnlocked(progress, module.id)).length;
+  return (
+    <div className="space-y-8">
+      <div className="rounded-[30px] border border-primary-100 bg-white p-8 shadow-[0_24px_80px_rgba(19,78,74,0.08)]">
+        <p className="text-xs font-black uppercase tracking-[0.22em] text-primary-600">Progress Roadmap</p>
+        <h1 className="mt-3 font-serif text-4xl font-bold text-primary-950">Your learning progression</h1>
+        <div className="mt-7 grid gap-4 md:grid-cols-4">
+          {[
+            ['Learning', `${overall}%`],
+            ['Completed', `${completed}/${modules.length}`],
+            ['Unlocked', `${unlocked}/${modules.length}`],
+            ['Achievements', `${completed + Object.keys(progress.quizScores).length}`],
+          ].map(([label, value]) => (
+            <div key={label} className="rounded-2xl bg-primary-50 p-5">
+              <div className="text-3xl font-bold text-primary-900">{value}</div>
+              <div className="mt-1 text-xs font-semibold uppercase tracking-[0.16em] text-primary-600">{label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="grid gap-4">
+        {levels.map((level, index) => {
+          const active = index <= activeLevel;
+          return (
+            <div key={level} className={`flex items-center gap-4 rounded-[24px] border p-5 transition-all ${active ? 'border-primary-200 bg-white shadow-sm' : 'border-gray-100 bg-white/60 opacity-70'}`}>
+              <div className={`flex h-12 w-12 items-center justify-center rounded-full ${active ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-400'}`}>{active ? <Check size={20} /> : <Lock size={18} />}</div>
+              <div className="flex-1">
+                <div className="font-serif text-xl font-bold text-primary-950">{level}</div>
+                <ProgressBar value={index < activeLevel ? 100 : index === activeLevel ? (overall % 25) * 4 : 0} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function AboutCourseView() {
+  return (
+    <div className="rounded-[30px] border border-primary-100 bg-white p-8 shadow-[0_24px_80px_rgba(19,78,74,0.08)] md:p-12">
+      <BrandLockup />
+      <p className="mt-10 text-xs font-black uppercase tracking-[0.22em] text-primary-600">About the course</p>
+      <h1 className="mt-4 max-w-3xl font-serif text-4xl font-bold leading-tight text-primary-950 md:text-5xl">A practical Tamil Nadu nutrition guide for everyday plates.</h1>
+      <p className="mt-6 max-w-3xl text-xl leading-9 text-gray-600">ARGPS Nutritious Lifestyle helps learners understand calories, portions, balanced meals, and sustainable habits through familiar Tamil Nadu foods.</p>
+      <div className="mt-10 grid gap-5 md:grid-cols-2">
+        <div className="rounded-[24px] border border-primary-100 bg-white p-6 shadow-sm"><p className="text-xs font-black uppercase tracking-[0.18em] text-primary-600">Main Author</p><h2 className="mt-3 font-serif text-2xl font-bold text-primary-950">G. Subashini</h2><p className="mt-1 font-semibold text-gray-500">Nutritionist</p></div>
+        <div className="rounded-[24px] border border-primary-100 bg-white p-6 shadow-sm"><p className="text-xs font-black uppercase tracking-[0.18em] text-primary-600">Co-Author</p><h2 className="mt-3 font-serif text-2xl font-bold text-primary-950">Rithanya Gopinathan</h2><p className="mt-1 font-semibold text-gray-500">Wellness Consultant</p></div>
+      </div>
+      <div className="mt-10 rounded-[26px] border-l-4 border-primary-500 bg-primary-50 p-7"><p className="text-xs font-black uppercase tracking-[0.22em] text-primary-600">Mission</p><p className="mt-3 font-serif text-3xl leading-10 text-primary-950">To provide a practical, realistic, and culturally relevant nutrition guide based on Tamil Nadu food habits.</p></div>
+    </div>
+  );
+}
+
+function DashboardProfileView({ user, profile }: { user: User; profile: AppUserProfile | null }) {
+  const [fullName, setFullName] = useState(profile?.full_name ?? '');
+  const [email, setEmail] = useState(profile?.email ?? user.email ?? '');
+  const [age, setAge] = useState(String(profile?.age ?? ''));
+  const [password, setPassword] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  async function save(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSaving(true); setMessage(''); setErrorMessage('');
+    const trimmedEmail = email.trim();
+    const { error: authError } = await updateAuthProfile({ fullName: fullName.trim(), email: trimmedEmail !== user.email ? trimmedEmail : undefined, password: password.length >= 6 ? password : undefined });
+    if (authError) { setErrorMessage(authError.message); setSaving(false); return; }
+    const { error } = await upsertAppUserProfile({ id: user.id, email: trimmedEmail, full_name: fullName.trim(), age: Number(age), password_setup: profile?.password_setup ?? true, created_at: profile?.created_at ?? new Date().toISOString() });
+    setSaving(false);
+    if (error) setErrorMessage(error.message);
+    else { setPassword(''); setMessage('Profile updated successfully.'); }
+  }
+  return (
+    <div className="mx-auto max-w-3xl rounded-[30px] border border-primary-100 bg-white p-8 shadow-[0_24px_80px_rgba(19,78,74,0.08)]">
+      <BrandLockup />
+      <h1 className="mt-8 font-serif text-4xl font-bold text-primary-950">Profile</h1>
+      <form onSubmit={save} className="mt-7 space-y-5">
+        <label className="block text-sm font-bold text-gray-700">Full Name<input value={fullName} onChange={event => setFullName(event.target.value)} className="mt-2 w-full rounded-2xl border border-primary-100 bg-primary-50/30 px-4 py-3 text-sm outline-none focus:border-primary-500" /></label>
+        <label className="block text-sm font-bold text-gray-700">Email<input type="email" value={email} onChange={event => setEmail(event.target.value)} className="mt-2 w-full rounded-2xl border border-primary-100 bg-primary-50/30 px-4 py-3 text-sm outline-none focus:border-primary-500" /></label>
+        <label className="block text-sm font-bold text-gray-700">Age<input type="number" value={age} onChange={event => setAge(event.target.value)} className="mt-2 w-full rounded-2xl border border-primary-100 bg-primary-50/30 px-4 py-3 text-sm outline-none focus:border-primary-500" /></label>
+        <label className="block text-sm font-bold text-gray-700">New Password<input type="password" value={password} onChange={event => setPassword(event.target.value)} placeholder="Leave blank to keep current password" className="mt-2 w-full rounded-2xl border border-primary-100 bg-primary-50/30 px-4 py-3 text-sm outline-none focus:border-primary-500" /></label>
+        {errorMessage && <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{errorMessage}</p>}
+        {message && <p className="rounded-2xl bg-green-50 px-4 py-3 text-sm text-green-700">{message}</p>}
+        <button disabled={saving} className="rounded-full bg-primary-600 px-6 py-3 text-sm font-bold text-white hover:bg-primary-700 disabled:opacity-60">{saving ? 'Saving...' : 'Save changes'}</button>
+      </form>
+    </div>
+  );
+}
+
 export const Courses: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [appUserProfile, setAppUserProfile] = useState<AppUserProfile | null | undefined>(undefined);
@@ -1225,6 +1431,8 @@ export const Courses: React.FC = () => {
 
       if (isProfileComplete(profile) && location.pathname === '/onboarding') {
         navigate('/courses');
+      } else if (!isProfileComplete(profile) && location.pathname === '/courses') {
+        navigate('/onboarding', { replace: true });
       }
     };
 
@@ -1238,10 +1446,10 @@ export const Courses: React.FC = () => {
   useEffect(() => {
     setProgress(readProgress());
     const onChange = () => setProgress(readProgress());
-    window.addEventListener('fuelsense:progress', onChange);
+    window.addEventListener('argps:progress', onChange);
     window.addEventListener('storage', onChange);
     return () => {
-      window.removeEventListener('fuelsense:progress', onChange);
+      window.removeEventListener('argps:progress', onChange);
       window.removeEventListener('storage', onChange);
     };
   }, []);
@@ -1412,29 +1620,23 @@ export const Courses: React.FC = () => {
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-16">
-      <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-primary-100 bg-primary-50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="min-h-screen bg-[#fbfbf2] px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-6xl">
+      <DashboardNav view={view} onView={(next) => { setView(next); window.scrollTo({ top: 0, behavior: 'smooth' }); }} />
+
+      <div className="mb-6 flex flex-col gap-3 rounded-[24px] border border-primary-100 bg-primary-50/70 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary-600">Signed in</p>
           <p className="mt-1 text-sm font-semibold text-primary-950">{getUserDisplayName(user, resolvedAppUserProfile)}</p>
         </div>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <button
-            type="button"
-            onClick={() => navigate('/profile')}
-            className="rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm font-bold text-primary-700 transition-colors hover:bg-primary-100"
-          >
-            {isProfileComplete(resolvedAppUserProfile) ? 'My Profile' : 'Complete Profile'}
-          </button>
-          <button
-            type="button"
-            onClick={logout}
-            disabled={logoutLoading}
-            className="rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm font-bold text-primary-700 transition-colors hover:bg-primary-100 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {logoutLoading ? 'Logging out...' : 'Logout'}
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={logout}
+          disabled={logoutLoading}
+          className="rounded-full border border-primary-200 bg-white px-4 py-2 text-sm font-bold text-primary-700 transition-colors hover:bg-primary-100 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {logoutLoading ? 'Logging out...' : 'Logout'}
+        </button>
       </div>
 
       {activityLoading && (
@@ -1462,7 +1664,6 @@ export const Courses: React.FC = () => {
           moduleId={view.moduleId}
           lessonId={view.lessonId}
           progress={progress}
-          onBack={() => setView({ type: 'overview' })}
           onComplete={() => markComplete(view.moduleId, view.lessonId)}
           onNext={(mid, lid) => goToLesson(mid, lid)}
         />
@@ -1470,7 +1671,6 @@ export const Courses: React.FC = () => {
       {view.type === 'quiz' && (
         <QuizView
           moduleId={view.moduleId}
-          progress={progress}
           onSave={(score, total) => saveQuiz(view.moduleId, score, total)}
           onContinue={() => continueAfterQuiz(view.moduleId)}
           onBack={() => setView({ type: 'overview' })}
@@ -1479,6 +1679,10 @@ export const Courses: React.FC = () => {
       {view.type === 'meal-builder' && (
         <MealBuilderView onBack={() => setView({ type: 'overview' })} />
       )}
+      {view.type === 'progress' && <ProgressView progress={progress} />}
+      {view.type === 'about' && <AboutCourseView />}
+      {view.type === 'profile' && <DashboardProfileView user={user} profile={resolvedAppUserProfile} />}
+      </div>
     </div>
   );
 };
