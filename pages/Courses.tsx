@@ -930,7 +930,7 @@ function MealBuilderView({ onBack }: { onBack: () => void }) {
 
   const filtered = foodItems.filter(f => {
     const matchCat = selectedCat === 'All' || f.category === selectedCat;
-    const matchSearch = f.name.toLowerCase().includes(search.toLowerCase());
+    const matchSearch = f.name.toLowerCase().includes(search.toLowerCase().trim());
     return matchCat && matchSearch;
   });
 
@@ -1177,7 +1177,6 @@ function OverviewView({
 function DashboardNav({ view, onView }: { view: View; onView: (next: View) => void }) {
   const items = [
     { label: 'Home', icon: Home, action: () => onView({ type: 'overview' }), active: view.type === 'overview' },
-    { label: 'Modules', icon: BookOpen, action: () => onView({ type: 'overview' }), active: view.type === 'lesson' || view.type === 'quiz' },
     { label: 'Meal Builder', icon: Utensils, action: () => onView({ type: 'meal-builder' }), active: view.type === 'meal-builder' },
     { label: 'Progress', icon: Trophy, action: () => onView({ type: 'progress' }), active: view.type === 'progress' },
     { label: 'About', icon: Sparkles, action: () => onView({ type: 'about' }), active: view.type === 'about' },
