@@ -1,6 +1,7 @@
-name: Keep Supabase Alive
+nname: Keep Supabase Alive
 
 on:
+  workflow_dispatch:
   schedule:
     - cron: "*/30 * * * *"
 
