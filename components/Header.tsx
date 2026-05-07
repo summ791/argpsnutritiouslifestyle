@@ -62,12 +62,6 @@ export const Header: React.FC = () => {
             </div>
           </div>
 
-            <button
-              onClick={() => navigate('/courses')}
-              className="rounded-full bg-primary-700 px-4 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-primary-800"
-            >
-              Courses
-            </button>
           </div>
       </div>
     </header>
