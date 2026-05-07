@@ -6,9 +6,13 @@ import {
   Check,
   CircleUserRound,
   Home,
+  KeyRound,
   Lock,
+  Mail,
   Sparkles,
+  ShieldCheck,
   Trophy,
+  UserPlus,
   Utensils,
 } from 'lucide-react';
 import { supabase } from '../services/supabaseClient';
@@ -446,11 +450,16 @@ function BrandLockup({ compact = false }: { compact?: boolean }) {
 function CourseLoginCard({ onAuthSuccess }: { onAuthSuccess: (user: User | null) => void }) {
   const navigate = useNavigate();
   const [mode, setMode] = useState<'login' | 'signup'>('login');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [otpEmail, setOtpEmail] = useState('');
+  const [signupEmail, setSignupEmail] = useState('');
+  const [signupPassword, setSignupPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [otp, setOtp] = useState('');
-  const [showOtp, setShowOtp] = useState(false);
-  const [loadingAction, setLoadingAction] = useState<'google' | 'password' | 'send-otp' | 'verify-otp' | null>(null);
+  const [showLoginOtp, setShowLoginOtp] = useState(false);
+  const [showSignupOtp, setShowSignupOtp] = useState(false);
+  const [loadingAction, setLoadingAction] = useState<'google' | 'password-login' | 'send-login-otp' | 'verify-login-otp' | 'signup' | 'verify-signup-otp' | null>(null);
   const [message, setMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [resendCooldown, setResendCooldown] = useState(0);
@@ -459,6 +468,33 @@ function CourseLoginCard({ onAuthSuccess }: { onAuthSuccess: (user: User | null)
     setMessage('');
     setErrorMessage('');
   };
+
+  const resetOtpState = () => {
+    setOtp('');
+    setShowLoginOtp(false);
+    setShowSignupOtp(false);
+    setResendCooldown(0);
+  };
+
+  const switchMode = (nextMode: 'login' | 'signup') => {
+    setMode(nextMode);
+    resetStatus();
+    resetOtpState();
+  };
+
+  useEffect(() => {
+    if (resendCooldown <= 0) {
+      return undefined;
+    }
+
+    const timer = window.setInterval(() => {
+      setResendCooldown(prev => (prev <= 1 ? 0 : prev - 1));
+    }, 1000);
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, [resendCooldown]);
 
   const signInWithGoogle = async () => {
     resetStatus();
@@ -477,66 +513,47 @@ function CourseLoginCard({ onAuthSuccess }: { onAuthSuccess: (user: User | null)
     }
   };
 
-  const handlePasswordAuth = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handlePasswordLogin = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     resetStatus();
-    setLoadingAction('password');
+    setLoadingAction('password-login');
 
-    const credentials = { email: email.trim(), password };
-    const { data, error } = mode === 'signup'
-      ? await supabase.auth.signUp({
-        ...credentials,
-        options: { emailRedirectTo: window.location.origin + '/courses' },
-      })
-      : await supabase.auth.signInWithPassword(credentials);
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: loginEmail.trim(),
+      password: loginPassword,
+    });
 
     if (error) {
       setErrorMessage(error.message);
-    } else if (mode === 'signup' && !data.session) {
-      setMessage('Account created successfully. Please check your email to confirm your signup.');
     } else {
-      setMessage(mode === 'signup' ? 'Account created successfully.' : 'Login successful.');
-      onAuthSuccess(data.session?.user ?? data.user);
+      setMessage('Login successful. Opening your courses...');
+      onAuthSuccess(data.user);
       navigate('/courses', { replace: true });
     }
 
     setLoadingAction(null);
   };
 
-  useEffect(() => {
-    if (resendCooldown <= 0) {
-      return undefined;
-    }
-
-    const timer = window.setInterval(() => {
-      setResendCooldown(prev => (prev <= 1 ? 0 : prev - 1));
-    }, 1000);
-
-    return () => {
-      window.clearInterval(timer);
-    };
-  }, [resendCooldown]);
-
-  const sendOtp = async () => {
-    if (loadingAction === 'send-otp' || resendCooldown > 0) {
+  const sendLoginOtp = async () => {
+    if (loadingAction === 'send-login-otp' || resendCooldown > 0) {
       return;
     }
 
     resetStatus();
-    setLoadingAction('send-otp');
+    setLoadingAction('send-login-otp');
 
     const { error } = await supabase.auth.signInWithOtp({
-      email: email.trim(),
+      email: otpEmail.trim(),
       options: {
-        shouldCreateUser: mode === 'signup'
-      }
+        shouldCreateUser: false,
+      },
     });
 
     if (error) {
       setErrorMessage(error.message);
       setResendCooldown(0);
     } else {
-      setShowOtp(true);
+      setShowLoginOtp(true);
       setMessage('OTP sent successfully. Check your email.');
       setResendCooldown(60);
     }
@@ -544,155 +561,277 @@ function CourseLoginCard({ onAuthSuccess }: { onAuthSuccess: (user: User | null)
     setLoadingAction(null);
   };
 
-  const verifyOtp = async () => {
+  const verifyLoginOtp = async () => {
     resetStatus();
-    setLoadingAction('verify-otp');
+    setLoadingAction('verify-login-otp');
 
     const { data, error } = await supabase.auth.verifyOtp({
-      email: email.trim(),
+      email: otpEmail.trim(),
       token: otp.trim(),
-      type: 'email'
+      type: 'email',
     });
 
     if (error) {
       setErrorMessage(error.message);
       setLoadingAction(null);
       return;
+    }
+
+    setMessage('OTP verified. Opening your courses...');
+    onAuthSuccess(data.user);
+    navigate('/courses', { replace: true });
+    setLoadingAction(null);
+  };
+
+  const createAccount = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    resetStatus();
+
+    if (signupPassword !== confirmPassword) {
+      setErrorMessage('Passwords do not match.');
+      return;
+    }
+
+    setLoadingAction('signup');
+
+    const { error } = await supabase.auth.signUp({
+      email: signupEmail.trim(),
+      password: signupPassword,
+      options: {
+        emailRedirectTo: window.location.origin + '/onboarding',
+      },
+    });
+
+    if (error) {
+      setErrorMessage(error.message);
+      setShowSignupOtp(false);
     } else {
-      onAuthSuccess(data.user);
-      setMessage(mode === 'signup' ? 'Signup successful.' : 'Login successful.');
-      navigate('/courses', { replace: true });
+      setShowSignupOtp(true);
+      setOtp('');
+      setMessage('Account created. Enter the OTP from your email to continue.');
+      setResendCooldown(60);
     }
 
     setLoadingAction(null);
   };
 
+  const verifySignupOtp = async () => {
+    resetStatus();
+    setLoadingAction('verify-signup-otp');
+
+    const { data, error } = await supabase.auth.verifyOtp({
+      email: signupEmail.trim(),
+      token: otp.trim(),
+      type: 'signup',
+    });
+
+    if (error) {
+      setErrorMessage(error.message);
+      setLoadingAction(null);
+      return;
+    }
+
+    if (data.user) {
+      const { error: profileError } = await upsertAppUserProfile({
+        id: data.user.id,
+        email: data.user.email ?? signupEmail.trim(),
+        full_name: null,
+        age: null,
+        password_setup: true,
+        created_at: new Date().toISOString(),
+      });
+
+      if (profileError) {
+        setErrorMessage(profileError.message);
+        setLoadingAction(null);
+        return;
+      }
+    }
+
+    setMessage('Email verified. Continue onboarding...');
+    onAuthSuccess(data.user);
+    navigate('/onboarding', { replace: true });
+    setLoadingAction(null);
+  };
+
   const isLoading = loadingAction !== null;
+  const signupReady = signupEmail.trim().length > 0 && signupPassword.length >= 6 && confirmPassword.length >= 6;
 
   return (
-    <div className="mx-auto max-w-md rounded-[28px] border border-primary-100 bg-white/95 p-6 shadow-[0_24px_80px_rgba(19,78,74,0.12)] md:p-8">
-      <div className="mb-6 flex justify-center">
-        <BrandLockup />
+    <div className="mx-auto max-w-5xl overflow-hidden rounded-[32px] border border-primary-100 bg-[#fffdf4] shadow-[0_28px_90px_rgba(19,78,74,0.14)]">
+      <div className="grid lg:grid-cols-[0.9fr_1.1fr]">
+        <div className="bg-primary-900 px-6 py-8 text-white sm:px-8 lg:px-10">
+          <div className="inline-flex rounded-2xl bg-white/95 p-3 shadow-sm">
+            <BrandLockup compact />
+          </div>
+          <h1 className="mt-8 font-serif text-4xl font-bold leading-tight text-white">Your nutrition course is ready.</h1>
+          <p className="mt-4 text-sm leading-7 text-primary-50/85">
+            Sign in with the method connected to your account, or create a new account and complete onboarding before entering the dashboard.
+          </p>
+          <div className="mt-8 grid gap-3">
+            {[
+              ['Email login', 'Existing users go straight to courses.'],
+              ['OTP login', 'Existing users verify once and continue.'],
+              ['New signup', 'Verify email, then complete onboarding.'],
+            ].map(([title, copy]) => (
+              <div key={title} className="rounded-2xl border border-white/10 bg-white/10 p-4">
+                <div className="text-sm font-bold">{title}</div>
+                <div className="mt-1 text-xs leading-5 text-primary-50/75">{copy}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="bg-white/95 p-5 sm:p-7 lg:p-9">
+          <div className="mb-6 grid grid-cols-2 rounded-2xl bg-primary-50 p-1.5">
+            {(['login', 'signup'] as const).map(tab => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => switchMode(tab)}
+                className={`rounded-xl px-4 py-3 text-sm font-bold transition-all duration-300 ${mode === tab ? 'bg-white text-primary-800 shadow-sm' : 'text-primary-500 hover:text-primary-800'}`}
+              >
+                {tab === 'login' ? 'Login' : 'Sign Up'}
+              </button>
+            ))}
+          </div>
+
+          {mode === 'login' ? (
+            <div className="space-y-5 transition-all duration-300">
+              <div>
+                <h2 className="font-serif text-3xl font-bold text-primary-950">Welcome back</h2>
+                <p className="mt-2 text-sm leading-6 text-gray-500">Choose one login option. Existing users enter the courses dashboard directly.</p>
+              </div>
+
+              <form onSubmit={handlePasswordLogin} className="rounded-3xl border border-primary-100 bg-primary-50/30 p-5">
+                <div className="mb-4 flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-primary-700 shadow-sm"><KeyRound size={18} /></div>
+                  <div>
+                    <h3 className="text-sm font-black uppercase tracking-[0.16em] text-primary-800">Email Password</h3>
+                    <p className="text-xs text-gray-500">No OTP or onboarding for existing users.</p>
+                  </div>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="block text-sm font-semibold text-gray-700">
+                    Email
+                    <input type="email" value={loginEmail} onChange={event => setLoginEmail(event.target.value)} required placeholder="you@example.com" className="mt-2 w-full rounded-2xl border border-primary-100 bg-white px-4 py-3 text-sm outline-none transition-colors focus:border-primary-500 focus:ring-1 focus:ring-primary-500" />
+                  </label>
+                  <label className="block text-sm font-semibold text-gray-700">
+                    Password
+                    <input type="password" value={loginPassword} onChange={event => setLoginPassword(event.target.value)} required placeholder="Your password" className="mt-2 w-full rounded-2xl border border-primary-100 bg-white px-4 py-3 text-sm outline-none transition-colors focus:border-primary-500 focus:ring-1 focus:ring-primary-500" />
+                  </label>
+                </div>
+                <button type="submit" disabled={isLoading || !loginEmail || !loginPassword} className="mt-4 w-full rounded-full bg-primary-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-primary-600/20 transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60">
+                  {loadingAction === 'password-login' ? 'Logging in...' : 'Login'}
+                </button>
+              </form>
+
+              <div className="rounded-3xl border border-primary-100 bg-white p-5 shadow-sm">
+                <div className="mb-4 flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary-50 text-primary-700"><Mail size={18} /></div>
+                  <div>
+                    <h3 className="text-sm font-black uppercase tracking-[0.16em] text-primary-800">Login with OTP</h3>
+                    <p className="text-xs text-gray-500">For existing accounts only.</p>
+                  </div>
+                </div>
+                <label className="block text-sm font-semibold text-gray-700">
+                  Email
+                  <input type="email" value={otpEmail} onChange={event => setOtpEmail(event.target.value)} required placeholder="you@example.com" className="mt-2 w-full rounded-2xl border border-primary-100 bg-primary-50/30 px-4 py-3 text-sm outline-none transition-colors focus:border-primary-500 focus:ring-1 focus:ring-primary-500" />
+                </label>
+                <button type="button" onClick={sendLoginOtp} disabled={isLoading || !otpEmail || resendCooldown > 0} className="mt-4 w-full rounded-full border border-primary-200 bg-white px-4 py-3 text-sm font-bold text-primary-700 transition-colors hover:bg-primary-50 disabled:cursor-not-allowed disabled:opacity-60">
+                  {loadingAction === 'send-login-otp' ? 'Sending OTP...' : resendCooldown > 0 && showLoginOtp ? `Resend OTP in ${resendCooldown}s` : showLoginOtp ? 'Resend OTP' : 'Login with OTP'}
+                </button>
+                {showLoginOtp && (
+                  <form
+                    onSubmit={event => {
+                      event.preventDefault();
+                      void verifyLoginOtp();
+                    }}
+                    className="mt-4 space-y-3"
+                  >
+                    <label className="block text-sm font-semibold text-gray-700">
+                      OTP
+                      <input type="text" inputMode="numeric" value={otp} onChange={event => setOtp(event.target.value)} required placeholder="Enter OTP" className="mt-2 w-full rounded-2xl border border-primary-100 bg-primary-50/30 px-4 py-3 text-sm outline-none transition-colors focus:border-primary-500 focus:ring-1 focus:ring-primary-500" />
+                    </label>
+                    <button type="submit" disabled={isLoading || !otp} className="w-full rounded-full bg-primary-600 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60">
+                      {loadingAction === 'verify-login-otp' ? 'Verifying...' : 'Verify OTP'}
+                    </button>
+                  </form>
+                )}
+              </div>
+
+              <button type="button" onClick={signInWithGoogle} disabled={isLoading} className="flex w-full items-center justify-center gap-3 rounded-full border border-primary-100 bg-white px-4 py-3 text-sm font-bold text-gray-700 shadow-sm transition-colors hover:bg-primary-50 disabled:cursor-not-allowed disabled:opacity-60">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full border border-gray-200 text-xs font-black text-blue-600">G</span>
+                {loadingAction === 'google' ? 'Connecting...' : 'Google Login'}
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-5 transition-all duration-300">
+              <div>
+                <h2 className="font-serif text-3xl font-bold text-primary-950">Create your account</h2>
+                <p className="mt-2 text-sm leading-6 text-gray-500">New users verify email first, complete onboarding, then enter courses.</p>
+              </div>
+
+              <form onSubmit={createAccount} className="rounded-3xl border border-primary-100 bg-primary-50/30 p-5">
+                <div className="mb-4 flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-primary-700 shadow-sm"><UserPlus size={18} /></div>
+                  <div>
+                    <h3 className="text-sm font-black uppercase tracking-[0.16em] text-primary-800">Sign Up</h3>
+                    <p className="text-xs text-gray-500">Email, password, confirmation, then OTP.</p>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <label className="block text-sm font-semibold text-gray-700">
+                    Email
+                    <input type="email" value={signupEmail} onChange={event => setSignupEmail(event.target.value)} required placeholder="you@example.com" className="mt-2 w-full rounded-2xl border border-primary-100 bg-white px-4 py-3 text-sm outline-none transition-colors focus:border-primary-500 focus:ring-1 focus:ring-primary-500" />
+                  </label>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <label className="block text-sm font-semibold text-gray-700">
+                      Password
+                      <input type="password" value={signupPassword} onChange={event => setSignupPassword(event.target.value)} required minLength={6} placeholder="Create password" className="mt-2 w-full rounded-2xl border border-primary-100 bg-white px-4 py-3 text-sm outline-none transition-colors focus:border-primary-500 focus:ring-1 focus:ring-primary-500" />
+                    </label>
+                    <label className="block text-sm font-semibold text-gray-700">
+                      Confirm Password
+                      <input type="password" value={confirmPassword} onChange={event => setConfirmPassword(event.target.value)} required minLength={6} placeholder="Confirm password" className="mt-2 w-full rounded-2xl border border-primary-100 bg-white px-4 py-3 text-sm outline-none transition-colors focus:border-primary-500 focus:ring-1 focus:ring-primary-500" />
+                    </label>
+                  </div>
+                </div>
+                <button type="submit" disabled={isLoading || !signupReady} className="mt-4 w-full rounded-full bg-primary-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-primary-600/20 transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60">
+                  {loadingAction === 'signup' ? 'Creating account...' : 'Create Account'}
+                </button>
+              </form>
+
+              {showSignupOtp && (
+                <form
+                  onSubmit={event => {
+                    event.preventDefault();
+                    void verifySignupOtp();
+                  }}
+                  className="rounded-3xl border border-primary-100 bg-white p-5 shadow-sm"
+                >
+                  <div className="mb-4 flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary-50 text-primary-700"><ShieldCheck size={18} /></div>
+                    <div>
+                      <h3 className="text-sm font-black uppercase tracking-[0.16em] text-primary-800">Verify Email</h3>
+                      <p className="text-xs text-gray-500">Incorrect OTPs can be retried.</p>
+                    </div>
+                  </div>
+                  <label className="block text-sm font-semibold text-gray-700">
+                    OTP
+                    <input type="text" inputMode="numeric" value={otp} onChange={event => setOtp(event.target.value)} required placeholder="Enter OTP" className="mt-2 w-full rounded-2xl border border-primary-100 bg-primary-50/30 px-4 py-3 text-sm outline-none transition-colors focus:border-primary-500 focus:ring-1 focus:ring-primary-500" />
+                  </label>
+                  <button type="submit" disabled={isLoading || !otp} className="mt-4 w-full rounded-full bg-primary-600 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60">
+                    {loadingAction === 'verify-signup-otp' ? 'Verifying...' : 'Verify OTP'}
+                  </button>
+                </form>
+              )}
+            </div>
+          )}
+
+          {errorMessage && <p className="mt-5 rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{errorMessage}</p>}
+          {message && <p className="mt-5 rounded-2xl bg-green-50 px-4 py-3 text-sm font-medium text-green-700">{message}</p>}
+        </div>
       </div>
-      <div className="mb-6 grid grid-cols-2 rounded-full bg-primary-50 p-1">
-        {(['login', 'signup'] as const).map(tab => (
-          <button
-            key={tab}
-            type="button"
-            onClick={() => { setMode(tab); setShowOtp(false); resetStatus(); }}
-            className={`rounded-full px-4 py-2 text-sm font-bold transition-all ${mode === tab ? 'bg-white text-primary-800 shadow-sm' : 'text-primary-500 hover:text-primary-800'}`}
-          >
-            {tab === 'login' ? 'Login' : 'Sign Up'}
-          </button>
-        ))}
-      </div>
-
-      <h1 className="font-serif text-3xl font-bold text-primary-950">{mode === 'login' ? 'Welcome back' : 'Create your account'}</h1>
-      <p className="mb-6 mt-2 text-sm leading-6 text-gray-500">
-        {mode === 'login' ? 'Access your courses and continue learning.' : 'Start your Tamil Nadu nutrition learning journey.'}
-      </p>
-
-      <button
-        type="button"
-        onClick={signInWithGoogle}
-        disabled={isLoading}
-        className="mb-5 flex w-full items-center justify-center gap-3 rounded-full border border-primary-100 bg-white px-4 py-3 text-sm font-bold text-gray-700 shadow-sm transition-colors hover:bg-primary-50 disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        <span className="flex h-5 w-5 items-center justify-center rounded-full border border-gray-200 text-xs font-black text-blue-600">
-          G
-        </span>
-        {loadingAction === 'google' ? 'Connecting...' : mode === 'login' ? 'Google Login' : 'Google Sign Up'}
-      </button>
-
-      <form onSubmit={handlePasswordAuth} className="space-y-3">
-        <label htmlFor="course-email" className="block text-sm font-semibold text-gray-700">
-          Email
-        </label>
-        <input
-          id="course-email"
-          type="email"
-          value={email}
-          onChange={event => setEmail(event.target.value)}
-          required
-          placeholder="you@example.com"
-          className="w-full rounded-2xl border border-primary-100 bg-primary-50/30 px-4 py-3 text-sm outline-none transition-colors focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-        />
-        <label htmlFor="course-password" className="block text-sm font-semibold text-gray-700">
-          Password
-        </label>
-        <input
-          id="course-password"
-          type="password"
-          value={password}
-          onChange={event => setPassword(event.target.value)}
-          placeholder={mode === 'login' ? 'Your password' : 'Create a secure password'}
-          className="w-full rounded-2xl border border-primary-100 bg-primary-50/30 px-4 py-3 text-sm outline-none transition-colors focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-        />
-        <button
-          type="submit"
-          disabled={isLoading || !email || !password}
-          className="w-full rounded-full bg-primary-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-primary-600/20 transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {loadingAction === 'password' ? 'Please wait...' : mode === 'login' ? 'Login' : 'Sign Up'}
-        </button>
-      </form>
-
-      <div className="my-5 flex items-center gap-3">
-        <div className="h-px flex-1 bg-gray-100" />
-        <span className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">{mode === 'login' ? 'Login with OTP' : 'OTP Sign Up'}</span>
-        <div className="h-px flex-1 bg-gray-100" />
-      </div>
-
-      <form className="space-y-3">
-        <button
-          type="button"
-          onClick={sendOtp}
-          disabled={isLoading || !email || resendCooldown > 0}
-          className="w-full rounded-full border border-primary-200 bg-white px-4 py-3 text-sm font-bold text-primary-700 transition-colors hover:bg-primary-50 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {loadingAction === 'send-otp'
-            ? 'Sending OTP...'
-            : resendCooldown > 0
-            ? `Resend OTP in ${resendCooldown}s`
-            : showOtp
-            ? 'Resend OTP'
-            : mode === 'login' ? 'Login with OTP' : 'Sign Up with OTP'}
-        </button>
-      </form>
-
-      {showOtp && (
-        <form
-          onSubmit={event => {
-            event.preventDefault();
-            void verifyOtp();
-          }}
-          className="mt-5 space-y-3"
-        >
-          <label htmlFor="course-otp" className="block text-sm font-semibold text-gray-700">
-            OTP
-          </label>
-          <input
-            id="course-otp"
-            type="text"
-            inputMode="numeric"
-            value={otp}
-            onChange={event => setOtp(event.target.value)}
-            required
-            placeholder="Enter OTP"
-            className="w-full rounded-2xl border border-primary-100 bg-primary-50/30 px-4 py-3 text-sm outline-none transition-colors focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-          />
-          <button
-            type="submit"
-            disabled={isLoading || !otp}
-            className="w-full rounded-full border border-primary-200 px-4 py-3 text-sm font-bold text-primary-700 transition-colors hover:bg-primary-50 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {loadingAction === 'verify-otp' ? 'Verifying...' : 'Verify OTP'}
-          </button>
-        </form>
-      )}
-
-      {errorMessage && <p className="mt-4 rounded-2xl bg-red-50 px-3 py-2 text-sm font-medium text-red-700">{errorMessage}</p>}
-      {message && <p className="mt-4 rounded-2xl bg-green-50 px-3 py-2 text-sm font-medium text-green-700">{message}</p>}
     </div>
   );
 }
