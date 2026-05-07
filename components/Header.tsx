@@ -13,6 +13,9 @@ const navLinks: NavLink[] = [
 export const Header: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const visibleNavLinks = location.pathname === '/about'
+    ? navLinks.filter(link => link.path !== '/courses')
+    : navLinks;
 
   const isActive = (path: string) => {
     if (path === '/' && location.pathname !== '/') return false;
@@ -38,7 +41,7 @@ export const Header: React.FC = () => {
 
           <div className="flex min-w-0 items-center gap-3 lg:gap-8">
             <nav className="hidden items-center space-x-4 lg:flex lg:space-x-10">
-              {navLinks.map((link) => (
+              {visibleNavLinks.map((link) => (
                 <RouterNavLink
                   key={link.name}
                   to={link.path}
