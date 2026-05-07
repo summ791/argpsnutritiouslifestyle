@@ -437,11 +437,11 @@ function ProgressBar({ value }: { value: number }) {
 // ─── Views ────────────────────────────────────────────────────────────────────
 function BrandLockup({ compact = false }: { compact?: boolean }) {
   return (
-    <div className="flex items-center gap-3">
-      <img src={LOGO_URL} alt="ARGPS Nutritious Lifestyle logo" className={`${compact ? 'h-10' : 'h-14'} w-auto object-contain`} />
-      <div>
-        <div className={`${compact ? 'text-base' : 'text-xl'} font-serif font-bold leading-tight text-primary-950`}>ARGPS Nutritious Lifestyle</div>
-        <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-primary-600">Tamil Nadu Nutrition</div>
+    <div className="flex min-w-0 items-center gap-3">
+      <img src={LOGO_URL} alt="ARGPS Nutritious Lifestyle logo" className={`${compact ? 'h-11' : 'h-14'} w-auto flex-shrink-0 object-contain`} />
+      <div className="min-w-0">
+        <div className={`${compact ? 'text-lg sm:text-xl' : 'text-xl'} font-serif font-bold leading-tight text-primary-950`}>ARGPS Nutritious Lifestyle</div>
+        <div className="mt-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-primary-600">Tamil Nadu Nutrition</div>
       </div>
     </div>
   );
@@ -683,6 +683,10 @@ function CourseLoginCard({ onAuthSuccess }: { onAuthSuccess: (user: User | null)
         </div>
 
         <div className="bg-white/95 p-5 sm:p-7 lg:p-9">
+          <div className="mb-6 rounded-3xl border border-primary-100 bg-white px-4 py-4 shadow-sm sm:px-5">
+            <BrandLockup compact />
+          </div>
+
           <div className="mb-6 grid grid-cols-2 rounded-2xl bg-primary-50 p-1.5">
             {(['login', 'signup'] as const).map(tab => (
               <button
@@ -695,6 +699,11 @@ function CourseLoginCard({ onAuthSuccess }: { onAuthSuccess: (user: User | null)
               </button>
             ))}
           </div>
+
+          <button type="button" onClick={signInWithGoogle} disabled={isLoading} className="mb-6 flex w-full items-center justify-center gap-3 rounded-2xl border border-primary-100 bg-white px-4 py-4 text-sm font-black text-gray-800 shadow-[0_18px_45px_rgba(19,78,74,0.08)] transition-all duration-300 hover:-translate-y-0.5 hover:border-primary-200 hover:bg-primary-50 disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-60">
+            <span className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 bg-white text-sm font-black text-blue-600 shadow-sm">G</span>
+            {loadingAction === 'google' ? 'Connecting...' : 'Continue with Google'}
+          </button>
 
           {mode === 'login' ? (
             <div className="space-y-5 transition-all duration-300">
@@ -759,11 +768,6 @@ function CourseLoginCard({ onAuthSuccess }: { onAuthSuccess: (user: User | null)
                   </form>
                 )}
               </div>
-
-              <button type="button" onClick={signInWithGoogle} disabled={isLoading} className="flex w-full items-center justify-center gap-3 rounded-full border border-primary-100 bg-white px-4 py-3 text-sm font-bold text-gray-700 shadow-sm transition-colors hover:bg-primary-50 disabled:cursor-not-allowed disabled:opacity-60">
-                <span className="flex h-5 w-5 items-center justify-center rounded-full border border-gray-200 text-xs font-black text-blue-600">G</span>
-                {loadingAction === 'google' ? 'Connecting...' : 'Google Login'}
-              </button>
             </div>
           ) : (
             <div className="space-y-5 transition-all duration-300">
