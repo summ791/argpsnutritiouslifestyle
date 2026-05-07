@@ -661,10 +661,7 @@ function CourseLoginCard({ onAuthSuccess }: { onAuthSuccess: (user: User | null)
     <div className="mx-auto max-w-5xl overflow-hidden rounded-[32px] border border-primary-100 bg-[#fffdf4] shadow-[0_28px_90px_rgba(19,78,74,0.14)]">
       <div className="grid lg:grid-cols-[0.9fr_1.1fr]">
         <div className="bg-primary-900 px-6 py-8 text-white sm:px-8 lg:px-10">
-          <div className="inline-flex rounded-2xl bg-white/95 p-3 shadow-sm">
-            <BrandLockup compact />
-          </div>
-          <h1 className="mt-8 font-serif text-4xl font-bold leading-tight text-white">Your nutrition course is ready.</h1>
+          <h1 className="font-serif text-4xl font-bold leading-tight text-white">Your nutrition course is ready.</h1>
           <p className="mt-4 text-sm leading-7 text-primary-50/85">
             Sign in with the method connected to your account, or create a new account and complete onboarding before entering the dashboard.
           </p>
@@ -702,7 +699,7 @@ function CourseLoginCard({ onAuthSuccess }: { onAuthSuccess: (user: User | null)
 
           <button type="button" onClick={signInWithGoogle} disabled={isLoading} className="mb-6 flex w-full items-center justify-center gap-3 rounded-2xl border border-primary-100 bg-white px-4 py-4 text-sm font-black text-gray-800 shadow-[0_18px_45px_rgba(19,78,74,0.08)] transition-all duration-300 hover:-translate-y-0.5 hover:border-primary-200 hover:bg-primary-50 disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-60">
             <span className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 bg-white text-sm font-black text-blue-600 shadow-sm">G</span>
-            {loadingAction === 'google' ? 'Connecting...' : 'Continue with Google'}
+            {loadingAction === 'google' ? 'Connecting...' : mode === 'signup' ? 'Sign up with Google' : 'Continue with Google'}
           </button>
 
           {mode === 'login' ? (
