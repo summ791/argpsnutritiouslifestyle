@@ -427,6 +427,7 @@ function FoodIcon({ item, compact = false }: { item: FoodItem; compact?: boolean
 // ─── Progress Helpers ─────────────────────────────────────────────────────────
 const PROGRESS_KEY = 'argps-progress-v1';
 const COURSE_PROGRESS_ROW = 'ARGPS_SEQUENTIAL_PROGRESS';
+const QUIZ_MARKS_PER_QUESTION = 10;
 const emptyProgress: Progress = {
   completedLessons: {},
   quizScores: {},
@@ -523,6 +524,27 @@ function overallProgressPct(p: Progress) {
   const total = modules.length;
   const done = modules.filter(module => isModuleComplete(p, module.id)).length;
   return total ? Math.round((done / total) * 100) : 0;
+}
+
+function quizTotalMarks(mod: Module) {
+  return mod.quiz.length * QUIZ_MARKS_PER_QUESTION;
+}
+
+function quizMarksFromCorrectAnswers(correctAnswers: number) {
+  return correctAnswers * QUIZ_MARKS_PER_QUESTION;
+}
+
+function normalizeQuizScoreForDisplay(mod: Module, score: number, total: number) {
+  const questionCount = mod.quiz.length;
+
+  if (total === questionCount) {
+    return {
+      score: quizMarksFromCorrectAnswers(score),
+      total: quizTotalMarks(mod),
+    };
+  }
+
+  return { score, total };
 }
 
 function getUserDisplayName(user: User, profile: AppUserProfile | null) {
@@ -1100,20 +1122,21 @@ function QuizView({
   const [submitted, setSubmitted] = useState(false);
   const [savedScore, setSavedScore] = useState(0);
 
-  const passScore = Math.ceil(mod.quiz.length * 0.7);
+  const totalMarks = quizTotalMarks(mod);
+  const passScore = Math.ceil(totalMarks * 0.7);
   const score = submitted ? savedScore : 0;
   const passed = score >= passScore;
   const currentQuestion = mod.quiz[currentIndex];
   const selectedAnswer = answers[currentQuestion.id];
   const questionProgress = Math.round(((currentIndex + 1) / mod.quiz.length) * 100);
-  const percentage = Math.round((score / mod.quiz.length) * 100);
+  const percentage = totalMarks ? Math.round((score / totalMarks) * 100) : 0;
   const resultMessages = percentage === 100
-    ? ['Excellent Work! 🌟', 'Outstanding Performance! 🎉', 'Perfect Score! 🏆', 'Brilliant Job! ✨']
+    ? ['Excellent Work! 🌟', 'Outstanding Performance! 🎉', 'Perfect Score! 🏆']
     : percentage >= 70
-      ? ['Well Done! 👏', 'Great Work! 💯', 'Amazing Effort! 🚀', 'Keep It Up! 🔥']
+      ? ['Well Done! 👏', 'Amazing Effort! 🚀']
       : percentage >= 50
-        ? ['Good Attempt 👍', 'Nice Try 😊', "You're Improving 📚", 'Keep Practicing 💪']
-        : ["Don't Give Up 💡", 'Practice Makes Perfect 📖', 'Keep Learning 🌱', 'Try Again Stronger 🚀'];
+        ? ['Good Attempt 👍', 'Keep Practicing 💪']
+        : ["Don't Give Up 💡", 'Keep Learning 🌱'];
   const resultMessage = resultMessages[(score + mod.number) % resultMessages.length];
   const resultTone = passed ? 'success' : percentage >= 50 ? 'average' : 'failed';
   const resultCardClass = resultTone === 'success'
@@ -1133,10 +1156,11 @@ function QuizView({
       : 'text-red-700';
 
   function submit() {
-    const nextScore = mod.quiz.filter(q => answers[q.id] === q.answer).length;
+    const correctAnswers = mod.quiz.filter(q => answers[q.id] === q.answer).length;
+    const nextScore = quizMarksFromCorrectAnswers(correctAnswers);
     setSavedScore(nextScore);
     setSubmitted(true);
-    onSave(nextScore, mod.quiz.length);
+    onSave(nextScore, totalMarks);
   }
 
   function retry() {
@@ -1180,7 +1204,7 @@ function QuizView({
           <div className="mx-auto mt-5 grid max-w-md gap-3 sm:grid-cols-3">
             <div className="rounded-2xl border border-white/70 bg-white/75 px-4 py-3">
               <div className="text-[10px] font-black uppercase tracking-[0.16em] text-gray-400">Score</div>
-              <div className="mt-1 text-lg font-black text-gray-900">{score}/{mod.quiz.length}</div>
+              <div className="mt-1 text-lg font-black text-gray-900">{score}/{totalMarks}</div>
             </div>
             <div className="rounded-2xl border border-white/70 bg-white/75 px-4 py-3">
               <div className="text-[10px] font-black uppercase tracking-[0.16em] text-gray-400">Percentage</div>
@@ -1488,6 +1512,7 @@ function OverviewView({
           const unlocked = isModuleUnlocked(progress, mod.id);
           const done = isModuleComplete(progress, mod.id);
           const quizScore = progress.quizScores[mod.id];
+          const quizMarks = quizScore ? normalizeQuizScoreForDisplay(mod, quizScore.score, quizScore.total) : null;
           const hasStarted = startedCourses.has(mod.title);
 
           return (
@@ -1517,9 +1542,9 @@ function OverviewView({
                 <ProgressBar value={pct} />
               </div>
 
-              {quizScore && (
+              {quizMarks && (
                 <div className="text-xs text-gray-400 mb-4">
-                  Quiz: {quizScore.score}/{quizScore.total} correct
+                  Quiz: {quizMarks.score}/{quizMarks.total} marks
                 </div>
               )}
 
@@ -1853,9 +1878,11 @@ export const Courses: React.FC = () => {
 
   const saveQuiz = useCallback((moduleId: string, score: number, total: number) => {
     const p = readProgress();
+    const mod = modules.find(item => item.id === moduleId);
     const prev = p.quizScores[moduleId];
+    const prevScore = mod && prev ? normalizeQuizScoreForDisplay(mod, prev.score, prev.total) : prev;
     const passed = score >= Math.ceil(total * 0.7);
-    const bestScore = Math.max(prev?.score ?? 0, score);
+    const bestScore = Math.max(prevScore?.score ?? 0, score);
     const hasPassed = prev?.passed === true || passed;
 
     p.quizScores[moduleId] = { score: bestScore, total, passed: hasPassed };
