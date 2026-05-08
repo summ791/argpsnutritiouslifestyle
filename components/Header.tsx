@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { Menu, X } from 'lucide-react';
 import { NavLink as RouterNavLink, useLocation, useNavigate } from 'react-router-dom';
 import { NavLink } from '../types';
 
@@ -13,9 +14,14 @@ const navLinks: NavLink[] = [
 export const Header: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const visibleNavLinks = location.pathname === '/about'
     ? navLinks.filter(link => link.path !== '/courses')
     : navLinks;
+
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [location.pathname]);
 
   const isActive = (path: string) => {
     if (path === '/' && location.pathname !== '/') return false;
@@ -65,8 +71,53 @@ export const Header: React.FC = () => {
             </div>
           </div>
 
+          <button
+            id="urw4wl"
+            type="button"
+            className="md:hidden text-black z-50"
+            onClick={() => setIsMobileMenuOpen((isOpen) => !isOpen)}
+            aria-label={isMobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+            aria-expanded={isMobileMenuOpen}
+            aria-controls="mobile-navigation"
+          >
+            {isMobileMenuOpen ? (
+              <X className="h-7 w-7" aria-hidden="true" strokeWidth={2.5} />
+            ) : (
+              <Menu className="h-7 w-7" aria-hidden="true" strokeWidth={2.5} />
+            )}
+          </button>
+
           </div>
       </div>
+      {isMobileMenuOpen && (
+        <nav
+          id="mobile-navigation"
+          className="md:hidden absolute left-0 right-0 top-full z-40 border-t border-gray-100 bg-white shadow-lg"
+        >
+          <div className="flex flex-col px-4 py-3">
+            {visibleNavLinks.map((link) => (
+              <RouterNavLink
+                key={link.name}
+                to={link.path}
+                className={`rounded-md px-3 py-3 text-sm font-medium transition-colors duration-200 ${
+                  isActive(link.path)
+                    ? 'bg-primary-50 text-primary-700 font-semibold'
+                    : 'text-gray-700 hover:bg-gray-50 hover:text-primary-600'
+                }`}
+              >
+                {link.name}
+              </RouterNavLink>
+            ))}
+            <button
+              type="button"
+              onClick={() => navigate('/contact')}
+              className="mt-3 bg-primary-700 text-white px-4 py-3 rounded-lg font-medium hover:bg-primary-800 transition-colors shadow-sm text-sm tracking-wide"
+            >
+              Get Started
+            </button>
+          </div>
+        </nav>
+      )}
     </header>
   );
 };
