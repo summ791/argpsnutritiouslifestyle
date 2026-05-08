@@ -1106,6 +1106,31 @@ function QuizView({
   const currentQuestion = mod.quiz[currentIndex];
   const selectedAnswer = answers[currentQuestion.id];
   const questionProgress = Math.round(((currentIndex + 1) / mod.quiz.length) * 100);
+  const percentage = Math.round((score / mod.quiz.length) * 100);
+  const resultMessages = percentage === 100
+    ? ['Excellent Work! 🌟', 'Outstanding Performance! 🎉', 'Perfect Score! 🏆', 'Brilliant Job! ✨']
+    : percentage >= 70
+      ? ['Well Done! 👏', 'Great Work! 💯', 'Amazing Effort! 🚀', 'Keep It Up! 🔥']
+      : percentage >= 50
+        ? ['Good Attempt 👍', 'Nice Try 😊', "You're Improving 📚", 'Keep Practicing 💪']
+        : ["Don't Give Up 💡", 'Practice Makes Perfect 📖', 'Keep Learning 🌱', 'Try Again Stronger 🚀'];
+  const resultMessage = resultMessages[(score + mod.number) % resultMessages.length];
+  const resultTone = passed ? 'success' : percentage >= 50 ? 'average' : 'failed';
+  const resultCardClass = resultTone === 'success'
+    ? 'border-green-200 bg-gradient-to-br from-green-50 via-white to-green-50 shadow-green-900/10'
+    : resultTone === 'average'
+      ? 'border-amber-200 bg-gradient-to-br from-amber-50 via-white to-orange-50 shadow-amber-900/10'
+      : 'border-red-200 bg-gradient-to-br from-red-50 via-white to-red-50 shadow-red-900/10';
+  const resultAccentClass = resultTone === 'success'
+    ? 'bg-green-600 text-white shadow-green-600/20'
+    : resultTone === 'average'
+      ? 'bg-amber-500 text-white shadow-amber-500/20'
+      : 'bg-red-600 text-white shadow-red-600/20';
+  const resultStatusClass = resultTone === 'success'
+    ? 'text-green-700'
+    : resultTone === 'average'
+      ? 'text-amber-700'
+      : 'text-red-700';
 
   function submit() {
     const nextScore = mod.quiz.filter(q => answers[q.id] === q.answer).length;
@@ -1147,11 +1172,26 @@ function QuizView({
       </div>
 
       {submitted && (
-        <div className={`rounded-2xl p-6 mb-8 text-center ${passed ? 'bg-green-50 border border-green-200' : 'bg-amber-50 border border-amber-200'}`}>
-          <div className="text-4xl mb-2">{passed ? '🎉' : '📚'}</div>
-          <div className="text-2xl font-bold text-gray-900">{score}/{mod.quiz.length}</div>
-          <div className="text-gray-600 mt-1">
-            {passed ? 'Well done!' : 'Keep studying and try again!'}
+        <div className={`mb-8 rounded-3xl border p-6 text-center shadow-xl transition-all duration-500 ${resultCardClass}`}>
+          <div className={`mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl text-2xl shadow-lg ${resultAccentClass}`}>
+            {passed ? '✓' : percentage >= 50 ? '!' : '×'}
+          </div>
+          <h2 className="font-serif text-3xl font-bold text-gray-900">{resultMessage}</h2>
+          <div className="mx-auto mt-5 grid max-w-md gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl border border-white/70 bg-white/75 px-4 py-3">
+              <div className="text-[10px] font-black uppercase tracking-[0.16em] text-gray-400">Score</div>
+              <div className="mt-1 text-lg font-black text-gray-900">{score}/{mod.quiz.length}</div>
+            </div>
+            <div className="rounded-2xl border border-white/70 bg-white/75 px-4 py-3">
+              <div className="text-[10px] font-black uppercase tracking-[0.16em] text-gray-400">Percentage</div>
+              <div className="mt-1 text-lg font-black text-gray-900">{percentage}%</div>
+            </div>
+            <div className="rounded-2xl border border-white/70 bg-white/75 px-4 py-3">
+              <div className="text-[10px] font-black uppercase tracking-[0.16em] text-gray-400">Status</div>
+              <div className={`mt-1 text-lg font-black ${resultStatusClass}`}>
+                {passed ? 'Passed ✅' : 'Failed ❌'}
+              </div>
+            </div>
           </div>
         </div>
       )}
