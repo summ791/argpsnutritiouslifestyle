@@ -46,7 +46,7 @@ export const Header: React.FC = () => {
           </div>
 
           <div className="flex min-w-0 items-center gap-3 lg:gap-8">
-            <nav className="hidden items-center space-x-4 lg:flex lg:space-x-10">
+            <nav className="hidden items-center space-x-4 lg:flex lg:space-x-10 [@media_(hover:none)_and_(pointer:coarse)_and_(min-width:900px)_and_(max-width:1023px)]:flex">
               {visibleNavLinks.map((link) => (
                 <RouterNavLink
                   key={link.name}
@@ -61,7 +61,7 @@ export const Header: React.FC = () => {
                 </RouterNavLink>
               ))}
             </nav>
-            <div className="hidden border-l border-gray-200 pl-4 lg:block lg:pl-8">
+            <div className="hidden border-l border-gray-200 pl-4 lg:block lg:pl-8 [@media_(hover:none)_and_(pointer:coarse)_and_(min-width:900px)_and_(max-width:1023px)]:block">
                 <button 
                   onClick={() => navigate('/contact')}
                   className="bg-primary-700 text-white px-4 lg:px-6 py-2 md:py-2.5 rounded-lg font-medium hover:bg-primary-800 transition-colors shadow-sm text-xs md:text-sm tracking-wide transform hover:-translate-y-0.5 duration-200 whitespace-nowrap"
