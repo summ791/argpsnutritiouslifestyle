@@ -72,6 +72,12 @@ type FoodItem = {
   fat: number;
 };
 
+type FoodVisual = {
+  icon: string;
+  label: string;
+  badge?: string;
+};
+
 type UserActivity = {
   id?: string;
   course_name: string;
@@ -312,7 +318,111 @@ const foodItems: FoodItem[] = [
   { name: 'Mutton Curry', emoji: 'NV', category: 'Non-Veg', serving: '100 g', calories: 280, protein: 22, carbs: 5, fat: 19 },
   { name: 'Filter Coffee', emoji: '☕', category: 'Beverages', serving: '1 cup with sugar', calories: 80, protein: 3, carbs: 10, fat: 3 },
   { name: 'Tender Coconut Water', emoji: '🥥', category: 'Beverages', serving: '1 glass', calories: 45, protein: 1.5, carbs: 9, fat: 0.5 },
+  { name: 'Paneer Butter Masala', emoji: 'PBM', category: 'Paneer Dishes', serving: '1 cup', calories: 360, protein: 14, carbs: 14, fat: 28 },
+  { name: 'Palak Paneer', emoji: 'PP', category: 'Paneer Dishes', serving: '1 cup', calories: 280, protein: 15, carbs: 10, fat: 20 },
+  { name: 'Kadai Paneer', emoji: 'KP', category: 'Paneer Dishes', serving: '1 cup', calories: 320, protein: 15, carbs: 13, fat: 24 },
+  { name: 'Paneer Tikka', emoji: 'PT', category: 'Paneer Dishes', serving: '100 g', calories: 260, protein: 16, carbs: 8, fat: 18 },
+  { name: 'Naan', emoji: 'NA', category: 'Naan & Breads', serving: '1 piece', calories: 260, protein: 8, carbs: 44, fat: 6 },
+  { name: 'Butter Naan', emoji: 'BN', category: 'Naan & Breads', serving: '1 piece', calories: 320, protein: 8, carbs: 45, fat: 12 },
+  { name: 'Garlic Naan', emoji: 'GN', category: 'Naan & Breads', serving: '1 piece', calories: 300, protein: 8, carbs: 46, fat: 9 },
+  { name: 'Veg Pizza', emoji: 'VP', category: 'Fast Food', serving: '2 slices', calories: 420, protein: 16, carbs: 54, fat: 16 },
+  { name: 'Chicken Pizza', emoji: 'CP', category: 'Fast Food', serving: '2 slices', calories: 480, protein: 24, carbs: 52, fat: 20 },
+  { name: 'Veg Burger', emoji: 'VB', category: 'Fast Food', serving: '1 burger', calories: 360, protein: 10, carbs: 48, fat: 14 },
+  { name: 'Chicken Burger', emoji: 'CB', category: 'Fast Food', serving: '1 burger', calories: 450, protein: 24, carbs: 44, fat: 20 },
+  { name: 'French Fries', emoji: 'FF', category: 'Fast Food', serving: '1 medium', calories: 320, protein: 4, carbs: 42, fat: 15 },
+  { name: 'Chicken Shawarma', emoji: 'SW', category: 'Restaurant Dishes', serving: '1 roll', calories: 420, protein: 25, carbs: 40, fat: 18 },
+  { name: 'Veg Fried Rice', emoji: 'VFR', category: 'Restaurant Dishes', serving: '1 plate', calories: 380, protein: 9, carbs: 58, fat: 12 },
+  { name: 'Chicken Fried Rice', emoji: 'CFR', category: 'Restaurant Dishes', serving: '1 plate', calories: 480, protein: 24, carbs: 58, fat: 16 },
+  { name: 'Gobi Manchurian', emoji: 'GM', category: 'Restaurant Dishes', serving: '1 cup', calories: 300, protein: 6, carbs: 36, fat: 14 },
+  { name: 'Chilli Chicken', emoji: 'CC', category: 'Restaurant Dishes', serving: '100 g', calories: 280, protein: 24, carbs: 12, fat: 15 },
+  { name: 'Adai', emoji: 'AD', category: 'Additional Tamil Nadu', serving: '1 medium', calories: 180, protein: 8, carbs: 28, fat: 4 },
+  { name: 'Kuzhi Paniyaram', emoji: 'KP', category: 'Additional Tamil Nadu', serving: '6 pieces', calories: 220, protein: 6, carbs: 36, fat: 6 },
+  { name: 'Appam', emoji: 'AP', category: 'Additional Tamil Nadu', serving: '2 pieces', calories: 240, protein: 5, carbs: 48, fat: 3 },
+  { name: 'Idiyappam', emoji: 'IDY', category: 'Additional Tamil Nadu', serving: '2 pieces', calories: 180, protein: 4, carbs: 38, fat: 1 },
+  { name: 'Puttu', emoji: 'PU', category: 'Additional Tamil Nadu', serving: '1 cup', calories: 260, protein: 5, carbs: 52, fat: 4 },
 ];
+
+const ICONIFY_BASE = 'https://api.iconify.design/fluent-emoji-flat';
+
+const foodVisualRules: Array<{ test: RegExp; icon: string; label: string }> = [
+  { test: /pizza/i, icon: 'pizza.svg', label: 'Pizza icon' },
+  { test: /burger/i, icon: 'hamburger.svg', label: 'Burger icon' },
+  { test: /fries/i, icon: 'french-fries.svg', label: 'French fries icon' },
+  { test: /shawarma|kothu|parotta/i, icon: 'stuffed-flatbread.svg', label: 'Wrap and flatbread icon' },
+  { test: /naan|chapati|dosa|adai|appam/i, icon: 'flatbread.svg', label: 'Flatbread icon' },
+  { test: /idli|paniyaram|puttu|idiyappam|pongal|upma|koozh|kali|mudde/i, icon: 'bowl-with-spoon.svg', label: 'Breakfast bowl icon' },
+  { test: /biryani|rice/i, icon: 'curry-rice.svg', label: 'Rice dish icon' },
+  { test: /paneer|kurma|curry|dal|sambar|rasam|kuzhambu|avial|manchurian/i, icon: 'pot-of-food.svg', label: 'Curry icon' },
+  { test: /fish|nethili/i, icon: 'fish-cake-with-swirl.svg', label: 'Fish dish icon' },
+  { test: /prawn/i, icon: 'shrimp.svg', label: 'Prawn icon' },
+  { test: /chicken|mutton|egg/i, icon: 'poultry-leg.svg', label: 'Non-veg dish icon' },
+  { test: /vada/i, icon: 'doughnut.svg', label: 'Vada icon' },
+  { test: /banana/i, icon: 'banana.svg', label: 'Banana icon' },
+  { test: /mango/i, icon: 'mango.svg', label: 'Mango icon' },
+  { test: /guava/i, icon: 'green-apple.svg', label: 'Guava icon' },
+  { test: /watermelon/i, icon: 'watermelon.svg', label: 'Watermelon icon' },
+  { test: /peanut|chana|sundal|sprouts/i, icon: 'beans.svg', label: 'Legume snack icon' },
+  { test: /beans|keerai|drumstick|brinjal/i, icon: 'leafy-green.svg', label: 'Vegetable icon' },
+  { test: /curd|buttermilk|milk/i, icon: 'glass-of-milk.svg', label: 'Dairy drink icon' },
+  { test: /coffee/i, icon: 'hot-beverage.svg', label: 'Coffee icon' },
+  { test: /coconut/i, icon: 'coconut.svg', label: 'Tender coconut icon' },
+];
+
+const categoryVisualRules: Array<{ test: RegExp; icon: string; label: string }> = [
+  { test: /Breakfast|Traditional|Additional Tamil Nadu/i, icon: 'bowl-with-spoon.svg', label: 'Tamil Nadu food category' },
+  { test: /Grains|Biryani|Rice/i, icon: 'curry-rice.svg', label: 'Rice category' },
+  { test: /Curries|Paneer/i, icon: 'pot-of-food.svg', label: 'Curry category' },
+  { test: /Non-Veg|Starters/i, icon: 'poultry-leg.svg', label: 'Non-veg category' },
+  { test: /Vegetables|Healthy/i, icon: 'leafy-green.svg', label: 'Vegetable category' },
+  { test: /Fruits/i, icon: 'mango.svg', label: 'Fruit category' },
+  { test: /Snacks|Fast Food|Restaurant/i, icon: 'hamburger.svg', label: 'Snack category' },
+  { test: /Dairy|Beverages/i, icon: 'glass-of-milk.svg', label: 'Beverage category' },
+  { test: /Naan/i, icon: 'flatbread.svg', label: 'Bread category' },
+];
+
+function iconifyUrl(icon: string) {
+  return `${ICONIFY_BASE}/${icon}`;
+}
+
+function initialsFor(name: string) {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(part => part[0]?.toUpperCase() ?? '')
+    .join('');
+}
+
+function getFoodVisual(item: FoodItem): FoodVisual {
+  const rule = foodVisualRules.find(entry => entry.test.test(`${item.name} ${item.category}`));
+  return {
+    icon: iconifyUrl(rule?.icon ?? 'fork-and-knife-with-plate.svg'),
+    label: rule?.label ?? `${item.name} food icon`,
+    badge: initialsFor(item.name),
+  };
+}
+
+function getCategoryVisual(category: string): FoodVisual {
+  const rule = categoryVisualRules.find(entry => entry.test.test(category));
+  return {
+    icon: iconifyUrl(rule?.icon ?? 'fork-and-knife-with-plate.svg'),
+    label: rule?.label ?? `${category} category icon`,
+  };
+}
+
+function FoodIcon({ item, compact = false }: { item: FoodItem; compact?: boolean }) {
+  const visual = getFoodVisual(item);
+  return (
+    <span className={`${compact ? 'h-8 w-8' : 'h-12 w-12'} relative inline-flex shrink-0 items-center justify-center rounded-2xl border border-primary-100 bg-white shadow-sm`}>
+      <img src={visual.icon} alt={visual.label} loading="lazy" className={`${compact ? 'h-6 w-6' : 'h-9 w-9'} object-contain`} />
+      {visual.badge && (
+        <span className="absolute -bottom-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full border border-white bg-primary-700 px-1 text-[8px] font-black leading-none text-white">
+          {visual.badge}
+        </span>
+      )}
+    </span>
+  );
+}
 
 // ─── Progress Helpers ─────────────────────────────────────────────────────────
 const PROGRESS_KEY = 'argps-progress-v1';
@@ -462,11 +572,15 @@ function CourseLoginCard({ onAuthSuccess }: { onAuthSuccess: (user: User | null)
   const [loadingAction, setLoadingAction] = useState<'google' | 'password-login' | 'send-login-otp' | 'verify-login-otp' | 'signup' | 'verify-signup-otp' | null>(null);
   const [message, setMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const [existingSignupEmail, setExistingSignupEmail] = useState('');
   const [resendCooldown, setResendCooldown] = useState(0);
+
+  const existingAccountMessage = 'You already have an account. Please use Login.';
 
   const resetStatus = () => {
     setMessage('');
     setErrorMessage('');
+    setExistingSignupEmail('');
   };
 
   const resetOtpState = () => {
@@ -480,6 +594,21 @@ function CourseLoginCard({ onAuthSuccess }: { onAuthSuccess: (user: User | null)
     setMode(nextMode);
     resetStatus();
     resetOtpState();
+  };
+
+  const showExistingAccountNotice = (email: string) => {
+    setErrorMessage(existingAccountMessage);
+    setExistingSignupEmail(email);
+    setShowSignupOtp(false);
+    setOtp('');
+    setResendCooldown(0);
+  };
+
+  const goToLoginFromSignup = () => {
+    const email = existingSignupEmail || signupEmail.trim();
+    switchMode('login');
+    setLoginEmail(email);
+    setOtpEmail(email);
   };
 
   useEffect(() => {
@@ -585,6 +714,13 @@ function CourseLoginCard({ onAuthSuccess }: { onAuthSuccess: (user: User | null)
 
   const createAccount = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const email = signupEmail.trim();
+
+    if (existingSignupEmail && existingSignupEmail.toLowerCase() === email.toLowerCase()) {
+      showExistingAccountNotice(email);
+      return;
+    }
+
     resetStatus();
 
     if (signupPassword !== confirmPassword) {
@@ -594,8 +730,8 @@ function CourseLoginCard({ onAuthSuccess }: { onAuthSuccess: (user: User | null)
 
     setLoadingAction('signup');
 
-    const { error } = await supabase.auth.signUp({
-      email: signupEmail.trim(),
+    const { data, error } = await supabase.auth.signUp({
+      email,
       password: signupPassword,
       options: {
         emailRedirectTo: window.location.origin + '/onboarding',
@@ -603,8 +739,15 @@ function CourseLoginCard({ onAuthSuccess }: { onAuthSuccess: (user: User | null)
     });
 
     if (error) {
-      setErrorMessage(error.message);
+      const alreadyRegistered = /already|registered|exists/i.test(error.message);
+      if (alreadyRegistered) {
+        showExistingAccountNotice(email);
+      } else {
+        setErrorMessage(error.message);
+      }
       setShowSignupOtp(false);
+    } else if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+      showExistingAccountNotice(email);
     } else {
       setShowSignupOtp(true);
       setOtp('');
@@ -829,7 +972,25 @@ function CourseLoginCard({ onAuthSuccess }: { onAuthSuccess: (user: User | null)
             </div>
           )}
 
-          {errorMessage && <p className="mt-5 rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{errorMessage}</p>}
+          {existingSignupEmail ? (
+            <div className="mt-5 rounded-3xl border border-red-100 bg-gradient-to-br from-red-50 to-white px-4 py-4 shadow-[0_18px_45px_rgba(127,29,29,0.08)] transition-all duration-300">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-black text-red-800">{existingAccountMessage}</p>
+                  <p className="mt-1 text-xs leading-5 text-red-700/75">{existingSignupEmail}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={goToLoginFromSignup}
+                  className="rounded-full bg-primary-700 px-5 py-2.5 text-xs font-black text-white shadow-lg shadow-primary-700/20 transition-all duration-300 hover:-translate-y-0.5 hover:bg-primary-800"
+                >
+                  Go to Login
+                </button>
+              </div>
+            </div>
+          ) : errorMessage ? (
+            <p className="mt-5 rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{errorMessage}</p>
+          ) : null}
           {message && <p className="mt-5 rounded-2xl bg-green-50 px-4 py-3 text-sm font-medium text-green-700">{message}</p>}
         </div>
       </div>
@@ -1069,10 +1230,11 @@ function MealBuilderView({ onBack }: { onBack: () => void }) {
   const [selectedCat, setSelectedCat] = useState<string>('All');
   const [search, setSearch] = useState('');
   const [meal, setMeal] = useState<{ item: FoodItem; qty: number }[]>([]);
+  const normalizedSearch = search.trim().toLowerCase();
 
   const filtered = foodItems.filter(f => {
     const matchCat = selectedCat === 'All' || f.category === selectedCat;
-    const matchSearch = f.name.toLowerCase().includes(search.toLowerCase().trim());
+    const matchSearch = f.name.toLowerCase().includes(normalizedSearch);
     return matchCat && matchSearch;
   });
 
@@ -1101,8 +1263,15 @@ function MealBuilderView({ onBack }: { onBack: () => void }) {
   return (
     <div>
       <button onClick={onBack} className="hidden" aria-hidden="true" tabIndex={-1} />
-      <h1 className="font-serif text-3xl font-bold text-gray-900 mb-2">🍽️ Meal Builder</h1>
-      <p className="text-gray-500 mb-8">Build your Tamil Nadu meal and see its nutrition breakdown.</p>
+      <div className="mb-8 flex items-center gap-4">
+        <span className="flex h-14 w-14 items-center justify-center rounded-3xl border border-primary-100 bg-white shadow-sm">
+          <img src={iconifyUrl('fork-and-knife-with-plate.svg')} alt="Meal Builder" className="h-10 w-10 object-contain" />
+        </span>
+        <div>
+          <h1 className="font-serif text-3xl font-bold text-gray-900">Meal Builder</h1>
+          <p className="mt-1 text-gray-500">Build your Tamil Nadu meal and see its nutrition breakdown.</p>
+        </div>
+      </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Food picker */}
@@ -1116,9 +1285,19 @@ function MealBuilderView({ onBack }: { onBack: () => void }) {
           </div>
           <div className="flex flex-wrap gap-2 mb-4">
             {['All', ...categories].map(cat => (
-              <button key={cat}
+              <button
+                key={cat}
                 onClick={() => setSelectedCat(cat)}
-                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${selectedCat === cat ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${selectedCat === cat ? 'bg-primary-600 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+              >
+                {cat !== 'All' && (
+                  <img
+                    src={getCategoryVisual(cat).icon}
+                    alt={getCategoryVisual(cat).label}
+                    loading="lazy"
+                    className="h-4 w-4 rounded-full bg-white object-contain"
+                  />
+                )}
                 {cat}
               </button>
             ))}
@@ -1127,8 +1306,8 @@ function MealBuilderView({ onBack }: { onBack: () => void }) {
             {filtered.map(item => (
               <button key={item.name}
                 onClick={() => addItem(item)}
-                className="flex items-center gap-3 bg-white border border-gray-100 rounded-xl p-3 text-left hover:border-primary-300 hover:bg-primary-50 transition-all shadow-sm">
-                <span className="text-2xl">{item.emoji}</span>
+                className="flex items-center gap-3 rounded-2xl border border-gray-100 bg-white p-3 text-left shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-primary-300 hover:bg-primary-50 hover:shadow-md">
+                <FoodIcon item={item} />
                 <div className="min-w-0">
                   <div className="text-sm font-medium text-gray-900 truncate">{item.name}</div>
                   <div className="text-xs text-gray-400">{item.serving}</div>
@@ -1136,6 +1315,11 @@ function MealBuilderView({ onBack }: { onBack: () => void }) {
                 </div>
               </button>
             ))}
+            {filtered.length === 0 && (
+              <div className="rounded-2xl border border-dashed border-gray-200 bg-white p-6 text-center text-sm text-gray-400 sm:col-span-2">
+                No matching foods found.
+              </div>
+            )}
           </div>
         </div>
 
@@ -1149,8 +1333,11 @@ function MealBuilderView({ onBack }: { onBack: () => void }) {
               <>
                 <div className="space-y-2 mb-4 max-h-48 overflow-y-auto">
                   {meal.map(({ item, qty }) => (
-                    <div key={item.name} className="flex items-center justify-between gap-2">
-                      <span className="text-sm text-gray-700 truncate">{item.emoji} {item.name} ×{qty}</span>
+                    <div key={item.name} className="flex items-center justify-between gap-3 rounded-2xl border border-gray-100 bg-primary-50/30 p-2">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <FoodIcon item={item} compact />
+                        <span className="truncate text-sm text-gray-700">{item.name} ×{qty}</span>
+                      </div>
                       <button onClick={() => removeItem(item.name)} className="text-red-400 hover:text-red-600 text-xs shrink-0">✕</button>
                     </div>
                   ))}
