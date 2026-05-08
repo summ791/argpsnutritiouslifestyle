@@ -1119,6 +1119,7 @@ function QuizView({
   const mod = modules.find(m => m.id === moduleId)!;
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [questionSubmitted, setQuestionSubmitted] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [savedScore, setSavedScore] = useState(0);
 
@@ -1128,6 +1129,7 @@ function QuizView({
   const passed = score >= passScore;
   const currentQuestion = mod.quiz[currentIndex];
   const selectedAnswer = answers[currentQuestion.id];
+  const isLastQuestion = currentIndex === mod.quiz.length - 1;
   const questionProgress = Math.round(((currentIndex + 1) / mod.quiz.length) * 100);
   const percentage = totalMarks ? Math.round((score / totalMarks) * 100) : 0;
   const resultMessages = percentage === 100
@@ -1166,15 +1168,23 @@ function QuizView({
   function retry() {
     setAnswers({});
     setCurrentIndex(0);
+    setQuestionSubmitted(false);
     setSavedScore(0);
     setSubmitted(false);
   }
 
-  function nextQuestion() {
-    if (currentIndex < mod.quiz.length - 1) {
-      setCurrentIndex(currentIndex + 1);
+  function submitAnswer() {
+    if (!questionSubmitted) {
+      setQuestionSubmitted(true);
       return;
     }
+
+    if (!isLastQuestion) {
+      setCurrentIndex(currentIndex + 1);
+      setQuestionSubmitted(false);
+      return;
+    }
+
     submit();
   }
 
@@ -1220,55 +1230,67 @@ function QuizView({
         </div>
       )}
 
-      <div className="space-y-6">
-        {[currentQuestion].map((q) => {
-          const selected = answers[q.id];
-          const isCorrect = selected === q.answer;
-          return (
-            <div key={q.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-              <div className="flex gap-3 mb-4">
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-100 text-primary-700 text-sm font-bold">
-                  {currentIndex + 1}
-                </span>
-                <p className="font-medium text-gray-900">{q.question}</p>
-              </div>
-              <div className="space-y-2">
-                {q.options.map((opt, oi) => {
-                  let cls = 'w-full text-left px-4 py-3 rounded-xl border text-sm transition-all ';
-                  if (!submitted) {
-                    cls += selected === oi
-                      ? 'border-primary-500 bg-primary-50 text-primary-800'
-                      : 'border-gray-200 hover:border-primary-300 hover:bg-gray-50 text-gray-700';
-                  } else {
-                    if (oi === q.answer) cls += 'border-green-400 bg-green-50 text-green-800';
-                    else if (oi === selected && !isCorrect) cls += 'border-red-300 bg-red-50 text-red-700';
-                    else cls += 'border-gray-200 text-gray-500';
-                  }
-                  return (
-                    <button key={oi} className={cls} disabled={submitted}
-                      onClick={() => setAnswers(a => ({ ...a, [q.id]: oi }))}>
-                      {opt}
-                    </button>
-                  );
-                })}
-              </div>
-              {submitted && (
-                <div className="mt-4 text-sm bg-blue-50 rounded-xl p-3 text-blue-800">
-                  💡 {q.explanation}
+      {!submitted && (
+        <div className="space-y-6">
+          {[currentQuestion].map((q) => {
+            const selected = answers[q.id];
+            const isCorrect = selected === q.answer;
+            return (
+              <div key={q.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 transition-all duration-300">
+                <div className="flex gap-3 mb-4">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-100 text-primary-700 text-sm font-bold">
+                    {currentIndex + 1}
+                  </span>
+                  <p className="font-medium text-gray-900">{q.question}</p>
                 </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+                <div className="space-y-2">
+                  {q.options.map((opt, oi) => {
+                    let cls = 'w-full text-left px-4 py-3 rounded-xl border text-sm transition-all ';
+                    if (!questionSubmitted) {
+                      cls += selected === oi
+                        ? 'border-primary-500 bg-primary-50 text-primary-800'
+                        : 'border-gray-200 hover:border-primary-300 hover:bg-gray-50 text-gray-700';
+                    } else {
+                      if (oi === q.answer) cls += 'border-green-400 bg-green-50 text-green-800';
+                      else if (oi === selected && !isCorrect) cls += 'border-red-300 bg-red-50 text-red-700';
+                      else cls += 'border-gray-200 text-gray-500';
+                    }
+                    return (
+                      <button key={oi} className={cls} disabled={questionSubmitted}
+                        onClick={() => setAnswers(a => ({ ...a, [q.id]: oi }))}>
+                        {opt}
+                      </button>
+                    );
+                  })}
+                </div>
+                {questionSubmitted && (
+                  <div className={`mt-5 rounded-2xl border p-4 text-left shadow-sm ${isCorrect ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}`}>
+                    <div className={`text-sm font-black ${isCorrect ? 'text-green-700' : 'text-red-700'}`}>
+                      {isCorrect ? 'Correct Answer ✅' : 'Wrong Answer ❌'}
+                    </div>
+                    <div className="mt-4 rounded-xl border border-white/70 bg-white/80 p-3">
+                      <div className="text-[10px] font-black uppercase tracking-[0.16em] text-gray-400">Correct Answer</div>
+                      <div className="mt-1 text-sm font-semibold text-gray-900">{q.options[q.answer]}</div>
+                    </div>
+                    <div className="mt-3 rounded-xl bg-primary-50 p-3 text-sm text-gray-700">
+                      <div className="mb-1 text-[10px] font-black uppercase tracking-[0.16em] text-primary-700">Reason</div>
+                      {q.explanation}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {!submitted && (
         <button
-          onClick={nextQuestion}
+          onClick={submitAnswer}
           disabled={selectedAnswer === undefined}
           className="w-full mt-8 bg-primary-600 text-white py-4 rounded-xl font-semibold hover:bg-primary-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
-          {currentIndex < mod.quiz.length - 1 ? 'Next Question' : 'Finish Quiz'}
+          {!questionSubmitted ? 'Submit Answer' : isLastQuestion ? 'View Results' : 'Next Question'}
         </button>
       )}
       {submitted && (
